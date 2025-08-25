@@ -74,7 +74,7 @@
 | game_id        | integer  | NO        | 試合 ID                            |
 | player_id      | integer  | NO        | プレイヤー ID                      |
 | score          | integer  | NO        | 麻雀の持ち点を表すスコア           |
-| points         | numeric  | NO        | 順位点などを加味したポイント       |
+| points         | numeric  | NO        | 順位点を加味したポイント           |
 | penalty_points | numeric  | NO        | チョンボなど減点を表す反則ポイント |
 | rank           | integer  | NO        | 順位                               |
 
@@ -90,14 +90,14 @@
 
 ### team_season_result（シーズン単位のチームの結果）
 
-| カラム名                    | データ型                        | NULL 許可 | 説明                                                                                               |
-| --------------------------- | ------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
-| id                          | integer                         | YES       | ID                                                                                                 |
-| name                        | varchar                         | YES       | チーム名                                                                                           |
-| year                        | integer                         | YES       | 年度                                                                                               |
-| season                      | ENUM(regular, semifinal, final) | YES       | シーズン種別                                                                                       |
-| raw_points                  | numeric                         | YES       | チームごとの games テーブルの points の合計                                                        |
-| total_points_with_carryover | numeric                         | YES       | raw_point に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
+| カラム名                    | データ型                        | NULL 許可 | 説明                                                                                                |
+| --------------------------- | ------------------------------- | --------- | --------------------------------------------------------------------------------------------------- |
+| id                          | integer                         | NO        | ID                                                                                                  |
+| name                        | varchar                         | NO        | チーム名                                                                                            |
+| year                        | integer                         | NO        | 年度                                                                                                |
+| season                      | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                        |
+| raw_points                  | numeric                         | NI        | チームごとの games テーブルの points の合計                                                         |
+| total_points_with_carryover | numeric                         | NO        | raw_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
 ### team_raw_points（シーズンにおける raw points）
 
@@ -110,12 +110,12 @@
 
 具体的なイベントの内容は、各種イベントテーブルと結合して参照する。
 
-| カラム名        | データ型                                                                                               | NULL 許可 | 説明                  |
-| --------------- | ------------------------------------------------------------------------------------------------------ | --------- | --------------------- |
-| id              | integer                                                                                                | NO        | イベント ID（主キー） |
-| kyoku_id        | integer                                                                                                | NO        | 局 ID                 |
-| type            | ENUM( haipai, draw, discard,ron,tsumo,reach,pon,chi,daiminkan,shominkan,ankan,dora_indicator,ryukyoku) | NO        | イベント種別          |
-| sequence_number | integer                                                                                                | NO        | シーケンス番号        |
+| カラム名        | データ型                                                                                              | NULL 許可 | 説明                  |
+| --------------- | ----------------------------------------------------------------------------------------------------- | --------- | --------------------- |
+| id              | integer                                                                                               | NO        | イベント ID（主キー） |
+| kyoku_id        | integer                                                                                               | NO        | 局 ID                 |
+| type            | ENUM(haipai, draw, discard,ron,tsumo,reach,pon,chi,daiminkan,shominkan,ankan,dora_indicator,ryukyoku) | NO        | イベント種別          |
+| sequence_number | integer                                                                                               | NO        | シーケンス番号        |
 
 ### 各種イベント詳細テーブル
 
@@ -151,7 +151,7 @@
 | fu               | integer  | NO        | 合計の符                                                       |
 | han              | integer  | NO        | 合計の翻数                                                     |
 | is_called        | boolean  | NO        | 鳴いたあがりかどうか（false は面前のあがりを意味する）         |
-| is_32000         | boolean  | NO        | 役満フラグ                                                     |
+| is_yakuman       | boolean  | NO        | 役満フラグ                                                     |
 | description      | varchar  | NO        | 役と点数の説明                                                 |
 
 ##### yaku_event（あがり時の役）
