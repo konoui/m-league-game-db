@@ -18,6 +18,9 @@
 
 ### player（プレイヤー）
 
+> [!NOTE]
+> name_furigana を使用してひらがなの名前から選手名/id を検索できる。
+
 | カラム名           | データ型 | NULL 許可 | 説明                    |
 | ------------------ | -------- | --------- | ----------------------- |
 | id                 | integer  | NO        | プレイヤー ID（主キー） |
@@ -25,9 +28,10 @@
 | name_furigana      | varchar  | NO        | プレイヤー名のひらがな  |
 | joined_season_year | integer  | NO        | 参加開始年度            |
 
-Note: name_furigana を使用してひらがなの名前から選手名/id を検索できる。
-
 ### player_team（プレイヤー・チーム関係）
+
+> [!NOTE]
+> プレイヤーは移籍や再契約のため、年度によって別のチームに所属する可能性がある。
 
 | カラム名           | データ型 | NULL 許可 | 説明               |
 | ------------------ | -------- | --------- | ------------------ |
@@ -35,8 +39,6 @@ Note: name_furigana を使用してひらがなの名前から選手名/id を�
 | team_id            | integer  | NO        | チーム ID          |
 | joined_season_year | integer  | NO        | チーム参加開始年度 |
 | left_season_year   | integer  | NO        | チーム離脱年度     |
-
-Note: プレイヤーは移籍や再契約のため、年度によって別のチームに所属する可能性がある。
 
 ## 試合・局テーブル
 
@@ -99,7 +101,8 @@ Note: プレイヤーは移籍や再契約のため、年度によって別の�
 
 ### team_raw_points（シーズンにおける raw points）
 
-Note: team_season_result を使用する。一時テールのため team_raw_points は使わない。
+> [!WARNING]
+> team_season_result を使用する。一時テールのため team_raw_points は使わない。
 
 ## イベントテーブル
 
@@ -123,6 +126,7 @@ Note: team_season_result を使用する。一時テールのため team_raw_poi
 | event_id       | integer          | NO        | イベント ID（主キー、外部キー） |
 | type           | ENUM(omote, ura) | NO        | ドラ種別（表ドラ・裏ドラ）      |
 | dora_indicator | varchar          | NO        | ドラ表示牌                      |
+| dora           | varchar          | NO        | ドラ牌                          |
 
 #### haipai_event（配牌イベント）
 
@@ -253,7 +257,8 @@ Note: team_season_result を使用する。一時テールのため team_raw_poi
 
 ### yaku_name（役定義のテーブル）
 
-Note: name_furigana を使用して役名をカタカナ名で検索できる。
+> [!NOTE]
+> name_furigana を使用して役名をカタカナ名で検索できる。
 
 | カラム名      | データ型 | NULL 許可 | 説明                 |
 | ------------- | -------- | --------- | -------------------- |
@@ -263,8 +268,9 @@ Note: name_furigana を使用して役名をカタカナ名で検索できる。
 
 ### player_state（ある巡目におけるプレイヤーの状態）
 
-Note: event_id よりどのイベント時の状態か確認できる。turn_number からある巡目の情報を確認でき 0 は配牌時の状態。
-特別な要件がなければシャンテン数には shanten_count を使用する。
+> [!NOTE]
+> nevent_id よりどのイベント時の状態か確認できる。turn_number からある巡目の情報を確認でき、0 は配牌時の状態。
+> 特別な要件がなければシャンテン数には shanten_count を使用する。
 
 | カラム名                       | データ型 | NULL 許可 | 説明                                                                       |
 | ------------------------------ | -------- | --------- | -------------------------------------------------------------------------- |
