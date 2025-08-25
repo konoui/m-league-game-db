@@ -90,19 +90,19 @@
 
 ### team_season_result（シーズン単位のチームの結果）
 
-| カラム名                    | データ型                        | NULL 許可 | 説明                                                                                                |
-| --------------------------- | ------------------------------- | --------- | --------------------------------------------------------------------------------------------------- |
-| id                          | integer                         | NO        | ID                                                                                                  |
-| name                        | varchar                         | NO        | チーム名                                                                                            |
-| year                        | integer                         | NO        | 年度                                                                                                |
-| season                      | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                        |
-| raw_points                  | numeric                         | NI        | チームごとの games テーブルの points の合計                                                         |
-| total_points_with_carryover | numeric                         | NO        | raw_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
+| カラム名                    | データ型                        | NULL 許可 | 説明                                                                                                 |
+| --------------------------- | ------------------------------- | --------- | ---------------------------------------------------------------------------------------------------- |
+| id                          | integer                         | NO        | ID                                                                                                   |
+| name                        | varchar                         | NO        | チーム名                                                                                             |
+| year                        | integer                         | NO        | 年度                                                                                                 |
+| season                      | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                         |
+| base_points                 | numeric                         | NI        | チームごとの games テーブルの points の合計                                                          |
+| total_points_with_carryover | numeric                         | NO        | base_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
-### team_raw_points（シーズンにおける raw points）
+### team_base_points（シーズンにおける base points）
 
 > [!WARNING]
-> team_season_result を使用する。一時テールのため team_raw_points は使わない。
+> team_season_result を使用する。一時テールのため team_base_points は使わない。
 
 ## イベントテーブル
 
@@ -110,12 +110,12 @@
 
 具体的なイベントの内容は、各種イベントテーブルと結合して参照する。
 
-| カラム名        | データ型                                                                                              | NULL 許可 | 説明                  |
-| --------------- | ----------------------------------------------------------------------------------------------------- | --------- | --------------------- |
-| id              | integer                                                                                               | NO        | イベント ID（主キー） |
-| kyoku_id        | integer                                                                                               | NO        | 局 ID                 |
-| type            | ENUM(haipai, draw, discard,ron,tsumo,reach,pon,chi,daiminkan,shominkan,ankan,dora_indicator,ryukyoku) | NO        | イベント種別          |
-| sequence_number | integer                                                                                               | NO        | シーケンス番号        |
+| カラム名    | データ型                                                                                              | NULL 許可 | 説明                  |
+| ----------- | ----------------------------------------------------------------------------------------------------- | --------- | --------------------- |
+| id          | integer                                                                                               | NO        | イベント ID（主キー） |
+| kyoku_id    | integer                                                                                               | NO        | 局 ID                 |
+| type        | ENUM(haipai, draw, discard,ron,tsumo,reach,pon,chi,daiminkan,shominkan,ankan,dora_indicator,ryukyoku) | NO        | イベント種別          |
+| event_order | integer                                                                                               | NO        | イベント順序番号      |
 
 ### 各種イベント詳細テーブル
 
@@ -146,7 +146,7 @@
 | actor_player_id  | integer  | NO        | 和了したプレイヤー ID                                          |
 | target_player_id | integer  | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）               |
 | points           | integer  | NO        | リーチ棒や本場のポイントを含む和了時のポイント（加算ポイント） |
-| raw_points       | integer  | NO        | リーチ棒や本場のポイントは含まれない和了時のポイント           |
+| base_points      | integer  | NO        | リーチ棒や本場のポイントは含まれない和了時のポイント           |
 | winning_tile     | varchar  | NO        | ロン（放銃）牌                                                 |
 | fu               | integer  | NO        | 合計の符                                                       |
 | han              | integer  | NO        | 合計の翻数                                                     |
@@ -263,7 +263,7 @@
 | カラム名      | データ型 | NULL 許可 | 説明                 |
 | ------------- | -------- | --------- | -------------------- |
 | id            | integer  | NO        | ID                   |
-| name          | integer  | NO        | 役の名前             |
+| name          | varchar  | NO        | 役の名前             |
 | name_furigana | varchar  | NO        | カタカナの役の名前牌 |
 
 ### player_state（ある巡目におけるプレイヤーの状態）
