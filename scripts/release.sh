@@ -1,5 +1,7 @@
 #!/bin/bash
 
 DB_FILE=database.sqlite3
+ZIP_DB_FILE=database.zip
 DATE=$(date +%Y%m%d)
-gh release create $DATE ./$DB_FILE --title "$DATE" --notes "$DATE"
+zip -j ./$ZIP_DB_FILE ./$DB_FILE
+gh release create $DATE ./$ZIP_DB_FILE --generate-notes
