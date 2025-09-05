@@ -55,14 +55,14 @@
 
 ### kyoku（局）
 
-| カラム名          | データ型                                 | NULL 許可 | 説明            |
-| ----------------- | ---------------------------------------- | --------- | --------------- |
-| id                | integer                                  | NO        | 局 ID（主キー） |
-| game_id           | integer                                  | NO        | 試合 ID         |
-| parent_player_id  | integer                                  | NO        | 親プレイヤー ID |
-| round             | ENUM(（1z1, 1z2 .... 2z1, 2w2 ... 2z4）) | NO        | 場              |
-| honba_count       | integer                                  | NO        | 本場数          |
-| reach_stick_count | integer                                  | NO        | リーチ棒数      |
+| カラム名          | データ型                                       | NULL 許可 | 説明            |
+| ----------------- | ---------------------------------------------- | --------- | --------------- |
+| id                | integer                                        | NO        | 局 ID（主キー） |
+| game_id           | integer                                        | NO        | 試合 ID         |
+| parent_player_id  | integer                                        | NO        | 親プレイヤー ID |
+| round             | ENUM（1z1, 1z2, 1z3, 1z4, 2z1, 2z2, 2z3, 2z4） | NO        | 場              |
+| honba_count       | integer                                        | NO        | 本場数          |
+| reach_stick_count | integer                                        | NO        | リーチ棒数      |
 
 ## 結果テーブル
 
@@ -96,7 +96,7 @@
 | name                        | varchar                         | NO        | チーム名                                                                                             |
 | year                        | integer                         | NO        | 年度                                                                                                 |
 | season                      | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                         |
-| base_points                 | numeric                         | NI        | チームごとの games テーブルの points の合計                                                          |
+| base_points                 | numeric                         | NO        | チームごとの games テーブルの points の合計                                                          |
 | total_points_with_carryover | numeric                         | NO        | base_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
 ### team_base_points（シーズンにおける base points）
@@ -108,7 +108,8 @@
 
 ### event（イベント）
 
-具体的なイベントの内容は、各種イベントテーブルと結合して参照する。
+> [!Note]
+> 具体的なイベントの内容は、各種イベントテーブルと結合して参照する。
 
 | カラム名    | データ型                                                                                              | NULL 許可 | 説明                  |
 | ----------- | ----------------------------------------------------------------------------------------------------- | --------- | --------------------- |
@@ -269,7 +270,8 @@
 ### player_state（ある巡目におけるプレイヤーの状態）
 
 > [!NOTE]
-> nevent_id よりどのイベント時の状態か確認できる。turn_number からある巡目の情報を確認でき、0 は配牌時の状態。
+> event_id よりどのイベント時の状態か確認できる。
+> turn_number からある巡目の情報を確認できる。0 は配牌時の状態を表す。
 > 特別な要件がなければシャンテン数には shanten_count を使用する。
 
 | カラム名                       | データ型 | NULL 許可 | 説明                                                                       |
@@ -277,7 +279,7 @@
 | event_id                       | integer  | NO        | イベント ID（主キー、外部キー）                                            |
 | player_id                      | integer  | NO        | プレイヤー ID                                                              |
 | hand                           | varchar  | NO        | 手牌                                                                       |
-| called                         | varchar  | NO        | 鳴いて晒した牌のブロック                                                   |
+| called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック                                                   |
 | shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシシャンテン数数の内最小の値）     |
 | standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                       |
 | seven_pairs_shanten_count      | integer  | NO        | 七対子のシャンテン数                                                       |
