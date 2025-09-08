@@ -2,5 +2,5 @@
 
 (
     cp ./../m-league-score-sheet/m-converter/data/database.db ./database.sqlite3
-    cp ./../m-league-data-ai/agent/TABLE.md ./TABLE.md
+    cp ./../m-league-score-sheet/m-converter/TABLE.md ./TABLE.md
 )
