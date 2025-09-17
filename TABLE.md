@@ -396,5 +396,5 @@
 | actor_player_id | integer                                                          | NO        | 反則・チョンボを行ったプレイヤー ID                 |
 | penalty_points  | numeric                                                          | NO        | 反則・チョンボのペナルティポイント（デフォルト: 0） |
 | description     | varchar                                                          | NO        | 反則・チョンボの詳細説明                            |
-| type            | ENUM(ノーテンリーチ, 誤ポン, 語チー, 少牌, 多牌, 誤ツモ, 誤ロン) | NO        | 反則・チョンボの種類                                |
+| type            | ENUM(ノーテンリーチ, 誤ポン, 誤チー, 少牌, 多牌, 誤ツモ, 誤ロン) | NO        | 反則・チョンボの種類                                |
 | is_restarted    | boolean                                                          | NO        | その局をやりなおし                                  |
