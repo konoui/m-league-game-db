@@ -6,7 +6,7 @@
 
 > [!NOTE]
 > end_year は start_year+1 となる。
-> 2024-25 シーズンと言えば、start_year が 2024、end_year が 2025 となる。
+> 2024-25 シーズンの場合 start_year が 2024、end_year が 2025 となる。
 
 **主キー**: id
 
@@ -19,7 +19,7 @@
 ### season_stage（シーズン内のステージ）
 
 > [!NOTE]
-> M リーグ公式は、レギュラーシーズン、セファイナルシリーズ、ファイナルシリーズと呼ぶが、データベース内では年のシーズン特別するためステージと呼ぶ。
+> M リーグ公式は、レギュラーシーズン、セファイナルシリーズ、ファイナルシリーズと呼ぶが、データベース内では年のシーズンと区別するためステージと呼ぶ。
 
 **主キー**: id
 **外部キー**: league_season_id -> league_season.id
@@ -235,7 +235,7 @@
 | event_id | integer         | NO        | イベント ID |
 | reason   | ENUM(end_kyoku) | NO        | 流局理由    |
 
-##### ryukyoku_player_event（流局時のプレイヤー情報）
+#### ryukyoku_player_event（流局時のプレイヤー情報）
 
 **主キー**: id
 **外部キー**: event_id -> event.id, player_id -> player.id
