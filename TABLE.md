@@ -207,7 +207,7 @@
 | target_player_id | integer  | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）               |
 | points           | integer  | NO        | リーチ棒や本場のポイントを含む和了時のポイント（加算ポイント） |
 | base_points      | integer  | NO        | リーチ棒や本場のポイントは含まれない和了時のポイント           |
-| winning_tile     | varchar  | NO        | ロン（放銃）牌                                                 |
+| winning_tile     | varchar  | NO        | ロン（放銃）牌もしくはツモあがり牌                             |
 | fu               | integer  | NO        | 合計の符                                                       |
 | han              | integer  | NO        | 合計の翻数                                                     |
 | is_called        | boolean  | NO        | 鳴いたあがりかどうか（false は面前のあがりを意味する）         |
