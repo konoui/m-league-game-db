@@ -146,10 +146,36 @@
 | base_points              | numeric                         | NO        | チームごとの games テーブルの points の合計                                                          |
 | final_points             | numeric                         | NO        | base_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
-### team_base_points（シーズンにおける base points）
+#### player_season_stats（シーズン単位のプレイヤーの統計）
 
-> [!WARNING]
-> team_season_result を使用する。一時テールのため team_base_points は使わない。
+> [!Note]
+> ビュー
+
+| カラム名                | データ型 | NULL 許可 | 説明                       |
+| ----------------------- | -------- | --------- | -------------------------- |
+| start_season_year       | integer  | NO        | シーズン開始年             |
+| stage                   | text     | NO        | ステージ                   |
+| player_name             | text     | NO        | プレイヤー名               |
+| team_name               | text     | NO        | チーム名                   |
+| total_kyoku_count       | integer  | NO        | 総局数                     |
+| total_game_count        | integer  | NO        | 総ゲーム数                 |
+| win_rate_percent        | numeric  | YES       | 和了率（パーセント）       |
+| dealin_rate_percent     | numeric  | YES       | 放銃率（パーセント）       |
+| furo_rate_percent       | numeric  | YES       | 副露率（パーセント）       |
+| reach_rate_percent      | numeric  | YES       | 立直率（パーセント）       |
+| ryukyoku_rate_percent   | numeric  | YES       | 流局率（パーセント）       |
+| tenpai_rate_percent     | numeric  | YES       | 流局時聴牌率（パーセント） |
+| tenpai_point_balance    | numeric  | YES       | 流局時テンパイ料収支       |
+| rank1_count             | integer  | YES       | 一位回数                   |
+| rank2_count             | integer  | YES       | 二位回数                   |
+| rank3_count             | integer  | YES       | 三位回数                   |
+| rank4_count             | integer  | YES       | 四位回数                   |
+| top_rate_percent        | numeric  | YES       | トップ率（パーセント）     |
+| top2_rate_percent       | numeric  | YES       | 連対率（パーセント）       |
+| avoid_last_rate_percent | numeric  | YES       | ラス回避率（パーセント）   |
+| best_score              | integer  | YES       | ベストスコア               |
+| avg_win_points          | numeric  | YES       | 平均打点                   |
+| avg_dealin_points       | numeric  | YES       | 放銃平均打点               |
 
 ## イベントテーブル
 
@@ -240,12 +266,13 @@
 **主キー**: id
 **外部キー**: event_id -> event.id, player_id -> player.id
 
-| カラム名  | データ型 | NULL 許可 | 説明                                   |
-| --------- | -------- | --------- | -------------------------------------- |
-| id        | integer  | NO        | ID                                     |
-| event_id  | integer  | NO        | イベント ID                            |
-| player_id | integer  | NO        | プレイヤー ID                          |
-| is_tenpai | boolean  | NO        | 聴牌かどうか（false はノーテンを表す） |
+| カラム名  | データ型 | NULL 許可 | 説明                                            |
+| --------- | -------- | --------- | ----------------------------------------------- |
+| id        | integer  | NO        | ID                                              |
+| event_id  | integer  | NO        | イベント ID                                     |
+| player_id | integer  | NO        | プレイヤー ID                                   |
+| is_tenpai | boolean  | NO        | 聴牌かどうか（false はノーテンを表す）          |
+| point     | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
 
 #### reach_event（リーチイベント）
 
