@@ -406,8 +406,8 @@
 | called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック                                                   |
 | shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシシャンテン数数の内最小の値）     |
 | standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                       |
-| seven_pairs_shanten_count      | integer  | NO        | 七対子のシャンテン数                                                       |
-| thirteen_orphans_shanten_count | integer  | NO        | 国士無双のシャンテン数                                                     |
+| seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                         |
+| thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                       |
 | is_reached                     | boolean  | NO        | リーチ状態か                                                               |
 | turn_number                    | integer  | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報 |
 
