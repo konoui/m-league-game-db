@@ -56,8 +56,9 @@
 
 ### player_team（プレイヤー・チーム関係）
 
-> [!NOTE]
+> [!IMPORTANT]
 > プレイヤーは移籍や再契約のため、年度によって別のチームに所属する可能性がある。
+> SQL クエリでは考慮する必要がある。
 
 **複合主キー**: player_id, team_id
 **外部キー**: player_id -> player.id, team_id -> team.id
