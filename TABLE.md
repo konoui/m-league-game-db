@@ -19,7 +19,7 @@
 ### season_stage（シーズン内のステージ）
 
 > [!NOTE]
-> M リーグ公式は、レギュラーシーズン、セファイナルシリーズ、ファイナルシリーズと呼ぶが、データベース内では年のシーズンと区別するためステージと呼ぶ。
+> M リーグ公式は、レギュラーシーズン、セミファイナルシリーズ、ファイナルシリーズと呼ぶが、データベース内では年のシーズンと区別するためステージと呼ぶ。
 
 **主キー**: id
 **外部キー**: league_season_id -> league_season.id
@@ -104,12 +104,11 @@
 
 ### game_player_result（試合単位のプレイヤーの結果）
 
-**主キー**: id
+**複合主キー**: game_id, player_id
 **外部キー**: game_id -> game.id, player_id -> player.id
 
 | カラム名       | データ型 | NULL 許可 | 説明                               |
 | -------------- | -------- | --------- | ---------------------------------- |
-| id             | integer  | NO        | ID                                 |
 | game_id        | integer  | NO        | 試合 ID                            |
 | player_id      | integer  | NO        | プレイヤー ID                      |
 | score          | integer  | NO        | 麻雀の持ち点を表すスコア           |
@@ -119,12 +118,11 @@
 
 ### kyoku_player_result（局単位のプレイヤーの結果）
 
-**主キー**: id
+**複合主キー**: kyoku_id, player_id
 **外部キー**: kyoku_id -> kyoku.id, player_id -> player.id
 
 | カラム名    | データ型             | NULL 許可 | 説明          |
 | ----------- | -------------------- | --------- | ------------- |
-| id          | integer              | NO        | ID            |
 | kyoku_id    | integer              | NO        | 局 ID         |
 | player_id   | integer              | NO        | プレイヤー ID |
 | score       | integer              | NO        | スコア        |
@@ -243,14 +241,14 @@
 
 ##### yaku_event（あがり時の役）
 
-**主キー**: event_id
-**外部キー**: event_id -> event.id, name_id -> name.id
+**主キー**: agari_event_id
+**外部キー**: agari_event_id -> agari_event.event_id, name_id -> yaku_name.id
 
-| カラム名 | データ型 | NULL 許可 | 説明        |
-| -------- | -------- | --------- | ----------- |
-| event_id | integer  | NO        | イベント ID |
-| name_id  | integer  | NO        | 役の名前 ID |
-| han      | integer  | NO        | 役の翻数    |
+| カラム名       | データ型 | NULL 許可 | 説明                  |
+| -------------- | -------- | --------- | --------------------- |
+| agari_event_id | integer  | NO        | あがり時のイベント ID |
+| name_id        | integer  | NO        | 役の名前 ID           |
+| han            | integer  | NO        | 役の翻数              |
 
 #### ryuyoku_event（流局イベント）
 
@@ -264,16 +262,15 @@
 
 #### ryukyoku_player_event（流局時のプレイヤー情報）
 
-**主キー**: id
-**外部キー**: event_id -> event.id, player_id -> player.id
+**複合主キー**: ryuyoku_event_id, player_id
+**外部キー**: ryukyoku_event_id -> ryuyoku_event.event_id, player_id -> player.id
 
-| カラム名  | データ型 | NULL 許可 | 説明                                            |
-| --------- | -------- | --------- | ----------------------------------------------- |
-| id        | integer  | NO        | ID                                              |
-| event_id  | integer  | NO        | イベント ID                                     |
-| player_id | integer  | NO        | プレイヤー ID                                   |
-| is_tenpai | boolean  | NO        | 聴牌かどうか（false はノーテンを表す）          |
-| point     | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
+| カラム名         | データ型 | NULL 許可 | 説明                                            |
+| ---------------- | -------- | --------- | ----------------------------------------------- |
+| ryuyoku_event_id | integer  | NO        | 流局時のイベント ID                             |
+| player_id        | integer  | NO        | プレイヤー ID                                   |
+| is_tenpai        | boolean  | NO        | 聴牌かどうか（false はノーテンを表す）          |
+| point            | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
 
 #### reach_event（リーチイベント）
 
@@ -383,11 +380,11 @@
 
 **主キー**: id
 
-| カラム名      | データ型 | NULL 許可 | 説明                 |
-| ------------- | -------- | --------- | -------------------- |
-| id            | integer  | NO        | ID                   |
-| name          | varchar  | NO        | 役の名前             |
-| name_furigana | varchar  | NO        | カタカナの役の名前牌 |
+| カラム名      | データ型 | NULL 許可 | 説明               |
+| ------------- | -------- | --------- | ------------------ |
+| id            | integer  | NO        | ID                 |
+| name          | varchar  | NO        | 役の名前           |
+| name_furigana | varchar  | NO        | カタカナの役の名前 |
 
 ### player_state（ある巡目におけるプレイヤーの状態）
 
@@ -405,7 +402,7 @@
 | player_id                      | integer  | NO        | プレイヤー ID                                                              |
 | hand                           | varchar  | NO        | 手牌                                                                       |
 | called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック                                                   |
-| shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシシャンテン数数の内最小の値）     |
+| shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）         |
 | standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                       |
 | seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                         |
 | thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                       |
