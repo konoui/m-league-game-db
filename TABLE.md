@@ -142,7 +142,7 @@
 | league_season_start_year | integer                         | NO        | シーズンの開始年度                                                                                   |
 | league_season_end_year   | integer                         | NO        | シーズンの終了年度                                                                                   |
 | season_stage_type        | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                         |
-| base_points              | numeric                         | NO        | チームごとの games テーブルの points の合計                                                          |
+| base_points              | numeric                         | NO        | チームごとの game テーブルの points の合計                                                           |
 | final_points             | numeric                         | NO        | base_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
 #### player_season_stats（シーズン単位のプレイヤーの統計）
@@ -150,31 +150,31 @@
 > [!Note]
 > ビュー
 
-| カラム名                | データ型 | NULL 許可 | 説明                       |
-| ----------------------- | -------- | --------- | -------------------------- |
-| start_season_year       | integer  | NO        | シーズン開始年             |
-| stage                   | text     | NO        | ステージ                   |
-| player_name             | text     | NO        | プレイヤー名               |
-| team_name               | text     | NO        | チーム名                   |
-| total_kyoku_count       | integer  | NO        | 総局数                     |
-| total_game_count        | integer  | NO        | 総ゲーム数                 |
-| win_rate_percent        | numeric  | YES       | 和了率（パーセント）       |
-| dealin_rate_percent     | numeric  | YES       | 放銃率（パーセント）       |
-| furo_rate_percent       | numeric  | YES       | 副露率（パーセント）       |
-| reach_rate_percent      | numeric  | YES       | 立直率（パーセント）       |
-| ryukyoku_rate_percent   | numeric  | YES       | 流局率（パーセント）       |
-| tenpai_rate_percent     | numeric  | YES       | 流局時聴牌率（パーセント） |
-| tenpai_point_balance    | numeric  | YES       | 流局時テンパイ料収支       |
-| rank1_count             | integer  | YES       | 一位回数                   |
-| rank2_count             | integer  | YES       | 二位回数                   |
-| rank3_count             | integer  | YES       | 三位回数                   |
-| rank4_count             | integer  | YES       | 四位回数                   |
-| top_rate_percent        | numeric  | YES       | トップ率（パーセント）     |
-| top2_rate_percent       | numeric  | YES       | 連対率（パーセント）       |
-| avoid_last_rate_percent | numeric  | YES       | ラス回避率（パーセント）   |
-| best_score              | integer  | YES       | ベストスコア               |
-| avg_win_points          | numeric  | YES       | 平均打点                   |
-| avg_dealin_points       | numeric  | YES       | 放銃平均打点               |
+| カラム名                | データ型                        | NULL 許可 | 説明                       |
+| ----------------------- | ------------------------------- | --------- | -------------------------- |
+| start_season_year       | integer                         | NO        | シーズン開始年             |
+| stage                   | ENUM(regular, semifinal, final) | NO        | ステージ                   |
+| player_name             | text                            | NO        | プレイヤー名               |
+| team_name               | text                            | NO        | チーム名                   |
+| total_kyoku_count       | integer                         | NO        | 総局数                     |
+| total_game_count        | integer                         | NO        | 総ゲーム数                 |
+| win_rate_percent        | numeric                         | YES       | 和了率（パーセント）       |
+| dealin_rate_percent     | numeric                         | YES       | 放銃率（パーセント）       |
+| furo_rate_percent       | numeric                         | YES       | 副露率（パーセント）       |
+| reach_rate_percent      | numeric                         | YES       | 立直率（パーセント）       |
+| ryukyoku_rate_percent   | numeric                         | YES       | 流局率（パーセント）       |
+| tenpai_rate_percent     | numeric                         | YES       | 流局時聴牌率（パーセント） |
+| tenpai_point_balance    | numeric                         | YES       | 流局時テンパイ料収支       |
+| rank1_count             | integer                         | YES       | 一位回数                   |
+| rank2_count             | integer                         | YES       | 二位回数                   |
+| rank3_count             | integer                         | YES       | 三位回数                   |
+| rank4_count             | integer                         | YES       | 四位回数                   |
+| top_rate_percent        | numeric                         | YES       | トップ率（パーセント）     |
+| top2_rate_percent       | numeric                         | YES       | 連対率（パーセント）       |
+| avoid_last_rate_percent | numeric                         | YES       | ラス回避率（パーセント）   |
+| best_score              | integer                         | YES       | ベストスコア               |
+| avg_win_points          | numeric                         | YES       | 平均打点                   |
+| avg_dealin_points       | numeric                         | YES       | 放銃平均打点               |
 
 ## イベントテーブル
 
@@ -336,7 +336,7 @@
 | block            | varchar  | NO        | 鳴いた後の牌のブロック  |
 | tile             | varchar  | NO        | ポンした牌              |
 
-#### an_kan_event（暗槓イベント）
+#### ankan_event（暗槓イベント）
 
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
@@ -347,19 +347,20 @@
 | actor_player_id | integer  | NO        | カンしたプレイヤー ID  |
 | block           | varchar  | NO        | 鳴いた後の牌のブロック |
 
-#### dai_kan_event（大明槓イベント）
+#### daiminkan_event（大明槓イベント）
 
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
 
-| カラム名        | データ型 | NULL 許可 | 説明                   |
-| --------------- | -------- | --------- | ---------------------- |
-| event_id        | integer  | NO        | イベント ID            |
-| actor_player_id | integer  | NO        | カンしたプレイヤー ID  |
-| tile            | varchar  | NO        | カンをした牌           |
-| block           | varchar  | NO        | 鳴いた後の牌のブロック |
+| カラム名         | データ型 | NULL 許可 | 説明                    |
+| ---------------- | -------- | --------- | ----------------------- |
+| event_id         | integer  | NO        | イベント ID             |
+| actor_player_id  | integer  | NO        | カンしたプレイヤー ID   |
+| target_player_id | integer  | NO        | 牌を捨てたプレイヤー ID |
+| tile             | varchar  | NO        | カンをした牌            |
+| block            | varchar  | NO        | 鳴いた後の牌のブロック  |
 
-#### sho_kan_event（小明槓・カカンイベント）
+#### shominkan_event（小明槓・カカンイベント）
 
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
