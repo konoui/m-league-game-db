@@ -26,3 +26,9 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
   - リーチ宣言の数について、リーチ宣言時放銃した場合のカウントに問題がある可能性があります。
 - 機能要望リクエストがあれば Issue を作成ください。
 - 局、試合単位の点数や結果に誤りはないと考えられます。
+
+## 関連記事
+
+- [Note M リーグの過去試合情報のデータベースを公開しました](https://note.com/konoui/n/nd4916f94485e)
+- [Note M リーグの牌譜を天鳳形式で公開しました](https://note.com/konoui/n/n42bd1adb3f30)
+  - [天鳳形式の M リーグ牌譜](https://m-league.konoui.dev/)

@@ -409,6 +409,8 @@
 | thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                       |
 | is_reached                     | boolean  | NO        | リーチ状態か                                                               |
 | turn_number                    | integer  | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報 |
+| call_count                     | integer  | NO        | 鳴いた回数、ただし暗槓を含む                                               |
+| is_menzen                      | boolean  | NO        | 面前かどうか                                                               |
 
 ### foul_play（反則行為・チョンボ）
 
