@@ -6,6 +6,12 @@ M リーグの試合情報を保存した sqlite3 形式のデータベースを
 
 [最新のリリース情報からダウンロードできます。](https://github.com/konoui/m-league-game-db/releases/latest)
 
+ダウンロード例
+
+```bash
+curl -L -O https://github.com/konoui/m-league-game-db/releases/latest/download/database.zip
+```
+
 実行例
 
 ```bash
