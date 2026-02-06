@@ -127,6 +127,7 @@
 | player_id   | integer              | NO        | プレイヤー ID |
 | score       | integer              | NO        | スコア        |
 | player_wind | ENUM(1z, 2z, 3z, 4z) | NO        | 自風          |
+| rank        | integer              | NO        | 順位          |
 
 ### team_season_result（シーズン単位のチームの結果）
 
@@ -235,8 +236,8 @@
 | winning_tile     | varchar  | NO        | ロン（放銃）牌もしくはツモあがり牌                             |
 | fu               | integer  | NO        | 合計の符                                                       |
 | han              | integer  | NO        | 合計の翻数                                                     |
-| is_called        | boolean  | NO        | 鳴いたあがりかどうか（false は面前のあがりを意味する）         |
-| is_yakuman       | boolean  | NO        | 役満フラグ                                                     |
+| is_called        | boolean  | NO        | 鳴いたあがりか（false は面前のあがりを意味する）               |
+| is_yakuman       | boolean  | NO        | 役満か                                                         |
 | description      | varchar  | NO        | 役と点数の説明                                                 |
 
 ##### yaku_event（あがり時の役）
@@ -269,7 +270,7 @@
 | ---------------- | -------- | --------- | ----------------------------------------------- |
 | ryuyoku_event_id | integer  | NO        | 流局時のイベント ID                             |
 | player_id        | integer  | NO        | プレイヤー ID                                   |
-| is_tenpai        | boolean  | NO        | 聴牌かどうか（false はノーテンを表す）          |
+| is_tenpai        | boolean  | NO        | 聴牌か（false はノーテンを表す）                |
 | point            | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
 
 #### reach_event（リーチイベント）
@@ -408,9 +409,29 @@
 | seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                         |
 | thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                       |
 | is_reached                     | boolean  | NO        | リーチ状態か                                                               |
+| is_furiten                     | boolean  | NO        | フリテン状態か                                                             |
 | turn_number                    | integer  | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報 |
 | call_count                     | integer  | NO        | 鳴いた回数、ただし暗槓を含む                                               |
-| is_menzen                      | boolean  | NO        | 面前かどうか                                                               |
+| is_menzen                      | boolean  | NO        | 面前か                                                                     |
+
+### player_tenpai_state（聴牌時のプレイヤーの状態）
+
+> [!NOTE]
+> event_id よりどのイベント時の状態か確認できる。
+
+**複合主キー**: event_id, player_id
+**外部キー**: event_id -> event.id, player_id -> player.id
+
+| カラム名                   | データ型 | NULL 許可 | 説明                         |
+| -------------------------- | -------- | --------- | ---------------------------- |
+| event_id                   | integer  | NO        | イベント ID                  |
+| player_id                  | integer  | NO        | プレイヤー ID                |
+| waiting_tiles              | varchar  | NO        | 待ち牌                       |
+| tile_types_count           | integer  | NO        | 待ち牌の種類                 |
+| ideal_tiles_count          | integer  | NO        | 論理的な（平面の）待ち牌の数 |
+| available_tiles_count      | integer  | NO        | 神目線の待ち牌の数           |
+| discarded_tiles_count      | integer  | NO        | 捨て牌にある待ち牌の数       |
+| dora_indicator_tiles_count | integer  | NO        | ドラ表示牌にある待ち牌の数   |
 
 ### foul_play（反則行為・チョンボ）
 
