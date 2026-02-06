@@ -14,11 +14,15 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 ## テーブル定義
 
-[こちらを参照してください。](./TABLE.md)
+[こちらを参照ください。](./TABLE.md)
 
 ## SQL クエリ例
 
-[こちらを参照してください。](./query-examples/README.md)
+[こちらを参照ください。](./query-examples/README.md)
+
+## 麻雀牌の表し方
+
+[こちらを参照ください。](./PAI_FORMAT.md)
 
 ## 留意事項
 
