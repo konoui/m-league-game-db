@@ -1,5 +1,47 @@
 # データベースのテーブル、ビューとカラムの説明
 
+<!-- TOC BEGIN -->
+
+- [基本テーブル](#基本テーブル)
+  - [league_season（リーグのシーズン）](#leagueseasonリーグのシーズン)
+  - [season_stage（シーズン内のステージ）](#seasonstageシーズン内のステージ)
+  - [team（チーム）](#teamチーム)
+  - [player（プレイヤー）](#playerプレイヤー)
+  - [player_team（プレイヤー・チーム関係）](#playerteamプレイヤーチーム関係)
+- [試合・局テーブル](#試合局テーブル)
+  - [game（試合）](#game試合)
+  - [kyoku（局）](#kyoku局)
+- [結果テーブル](#結果テーブル)
+  - [game_player_result（試合単位のプレイヤーの結果）](#gameplayerresult試合単位のプレイヤーの結果)
+  - [kyoku_player_result（局単位のプレイヤーの結果）](#kyokuplayerresult局単位のプレイヤーの結果)
+  - [team_season_result（シーズン単位のチームの結果）](#teamseasonresultシーズン単位のチームの結果)
+    - [player_season_stats（シーズン単位のプレイヤーの統計）](#playerseasonstatsシーズン単位のプレイヤーの統計)
+- [イベントテーブル](#イベントテーブル)
+  - [event（イベント）](#eventイベント)
+  - [各種イベント詳細テーブル](#各種イベント詳細テーブル)
+    - [dora_indicator_event（ドラ表示牌イベント）](#doraindicatoreventドラ表示牌イベント)
+    - [haipai_event（配牌イベント）](#haipaievent配牌イベント)
+    - [agari_event（ツモあがり、ロンあがりイベント）](#agarieventツモあがりロンあがりイベント)
+      - [yaku_event（あがり時の役）](#yakueventあがり時の役)
+    - [ryuyoku_event（流局イベント）](#ryuyokuevent流局イベント)
+    - [ryukyoku_player_event（流局時のプレイヤー情報）](#ryukyokuplayerevent流局時のプレイヤー情報)
+    - [reach_event（リーチイベント）](#reacheventリーチイベント)
+    - [discard_event（打牌イベント）](#discardevent打牌イベント)
+    - [draw_event（ツモイベント/牌をひくイベント）](#draweventツモイベント牌をひくイベント)
+  - [鳴き関連テーブル](#鳴き関連テーブル)
+    - [chi_event（チーイベント）](#chieventチーイベント)
+    - [pon_event（ポンイベント）](#poneventポンイベント)
+    - [ankan_event（暗槓イベント）](#ankanevent暗槓イベント)
+    - [daiminkan_event（大明槓イベント）](#daiminkanevent大明槓イベント)
+    - [shominkan_event（小明槓・カカンイベント）](#shominkanevent小明槓カカンイベント)
+- [その他のテーブル](#その他のテーブル)
+  - [yaku_name（役定義のテーブル）](#yakuname役定義のテーブル)
+  - [player_state（ある巡目におけるプレイヤーの状態）](#playerstateある巡目におけるプレイヤーの状態)
+  - [player_tenpai_state（聴牌時のプレイヤーの状態）](#playertenpaistate聴牌時のプレイヤーの状態)
+  - [foul_play（反則行為・チョンボ）](#foulplay反則行為チョンボ)
+
+<!-- TOC END -->
+
 ## 基本テーブル
 
 ### league_season（リーグのシーズン）
