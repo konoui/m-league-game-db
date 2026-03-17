@@ -1,0 +1,26 @@
+name: Validate SQL Queries
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download latest database
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download --pattern 'database.zip'
+          unzip database.zip
+
+      - name: Run query validation
+        run: |
+          for f in query-examples/*.md; do
+            [ "$(basename "$f")" = "README.md" ] && continue
+            ./scripts/run-query.sh database.sqlite3 "$f" || exit 1
+          done
