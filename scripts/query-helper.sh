@@ -26,19 +26,25 @@ run_query() {
 
   sql=$(extract_sql "$md") || exit 1
 
+  local start_time end_time elapsed
+  start_time=$(date +%s)
+
   result=$(sqlite3 "$db" "$sql") || {
     echo "FAIL: $md (query execution error)" >&2
     exit 1
   }
 
+  end_time=$(date +%s)
+  elapsed=$((end_time - start_time))
+
   row_count=$(printf '%s\n' "$result" | grep -c .)
 
   if [ "$row_count" -eq 0 ]; then
-    echo "FAIL: $md (0 rows returned)" >&2
+    echo "FAIL: $md (0 rows returned) [${elapsed}s]" >&2
     exit 1
   fi
 
-  echo "PASS: $md ($row_count rows)"
+  echo "PASS: $md ($row_count rows) [${elapsed}s]"
 }
 
 [ $# -lt 1 ] && usage
