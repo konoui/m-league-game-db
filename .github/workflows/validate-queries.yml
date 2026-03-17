@@ -9,7 +9,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download latest database
         env:
@@ -19,8 +19,4 @@ jobs:
           unzip database.zip
 
       - name: Run query validation
-        run: |
-          for f in query-examples/*.md; do
-            [ "$(basename "$f")" = "README.md" ] && continue
-            ./scripts/run-query.sh database.sqlite3 "$f" || exit 1
-          done
+        run: ./scripts/query-helper.sh run-all database.sqlite3 query-examples
