@@ -29,7 +29,7 @@ run_query() {
   local start_time end_time elapsed
   start_time=$(date +%s)
 
-  result=$(sqlite3 "$db" "$sql") || {
+  result=$(printf '%s\n' "$sql" | sqlite3 "$db") || {
     echo "FAIL: $md (query execution error)" >&2
     exit 1
   }
