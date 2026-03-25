@@ -23,7 +23,7 @@
     - [haipai_event（配牌イベント）](#haipai_event配牌イベント)
     - [agari_event（ツモあがり、ロンあがりイベント）](#agari_eventツモあがりロンあがりイベント)
       - [yaku_event（あがり時の役）](#yaku_eventあがり時の役)
-    - [ryuyoku_event（流局イベント）](#ryuyoku_event流局イベント)
+    - [ryukyoku_event（流局イベント）](#ryukyoku_event流局イベント)
     - [ryukyoku_player_event（流局時のプレイヤー情報）](#ryukyoku_player_event流局時のプレイヤー情報)
     - [reach_event（リーチイベント）](#reach_eventリーチイベント)
     - [discard_event（打牌イベント）](#discard_event打牌イベント)
@@ -293,7 +293,7 @@
 | name_id        | integer  | NO        | 役の名前 ID           |
 | han            | integer  | NO        | 役の翻数              |
 
-#### ryuyoku_event（流局イベント）
+#### ryukyoku_event（流局イベント）
 
 **主キー**: event_id
 **外部キー**: event_id -> event.id
@@ -305,15 +305,15 @@
 
 #### ryukyoku_player_event（流局時のプレイヤー情報）
 
-**複合主キー**: ryuyoku_event_id, player_id
-**外部キー**: ryukyoku_event_id -> ryuyoku_event.event_id, player_id -> player.id
+**複合主キー**: ryukyoku_event_id, player_id
+**外部キー**: ryukyoku_event_id -> ryukyoku_event.event_id, player_id -> player.id
 
-| カラム名         | データ型 | NULL 許可 | 説明                                            |
-| ---------------- | -------- | --------- | ----------------------------------------------- |
-| ryuyoku_event_id | integer  | NO        | 流局時のイベント ID                             |
-| player_id        | integer  | NO        | プレイヤー ID                                   |
-| is_tenpai        | boolean  | NO        | 聴牌か（false はノーテンを表す）                |
-| point            | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
+| カラム名          | データ型 | NULL 許可 | 説明                                            |
+| ----------------- | -------- | --------- | ----------------------------------------------- |
+| ryukyoku_event_id | integer  | NO        | 流局時のイベント ID                             |
+| player_id         | integer  | NO        | プレイヤー ID                                   |
+| is_tenpai         | boolean  | NO        | 聴牌か（false はノーテンを表す）                |
+| point             | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
 
 #### reach_event（リーチイベント）
 
