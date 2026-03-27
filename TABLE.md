@@ -22,7 +22,7 @@
     - [dora_indicator_event（ドラ表示牌イベント）](#dora_indicator_eventドラ表示牌イベント)
     - [haipai_event（配牌イベント）](#haipai_event配牌イベント)
     - [agari_event（ツモあがり、ロンあがりイベント）](#agari_eventツモあがりロンあがりイベント)
-      - [yaku_event（あがり時の役）](#yaku_eventあがり時の役)
+      - [agari_yaku_event（あがり時の役）](#agari_yaku_eventあがり時の役)
     - [ryukyoku_event（流局イベント）](#ryukyoku_event流局イベント)
     - [ryukyoku_player_event（流局時のプレイヤー情報）](#ryukyoku_player_event流局時のプレイヤー情報)
     - [reach_event（リーチイベント）](#reach_eventリーチイベント)
@@ -282,7 +282,7 @@
 | is_yakuman       | boolean  | NO        | 役満か                                                         |
 | description      | varchar  | NO        | 役と点数の説明                                                 |
 
-##### yaku_event（あがり時の役）
+##### agari_yaku_event（あがり時の役）
 
 **主キー**: agari_event_id
 **外部キー**: agari_event_id -> agari_event.event_id, name_id -> yaku_name.id
