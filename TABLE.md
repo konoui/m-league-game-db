@@ -38,6 +38,8 @@
   - [yaku_name（役定義のテーブル）](#yaku_name役定義のテーブル)
   - [player_state（ある巡目におけるプレイヤーの状態）](#player_stateある巡目におけるプレイヤーの状態)
   - [player_tenpai_state（聴牌時のプレイヤーの状態）](#player_tenpai_state聴牌時のプレイヤーの状態)
+  - [tenpai_agari_matrix（聴牌時のあがり可能性マトリックス）](#tenpai_agari_matrix聴牌時のあがり可能性マトリックス)
+  - [tenpai_yaku_event（聴牌時のあがり役）](#tenpai_yaku_event聴牌時のあがり役)
   - [foul_play（反則行為・チョンボ）](#foul_play反則行為チョンボ)
 
 <!-- TOC END -->
@@ -474,6 +476,36 @@
 | available_tiles_count      | integer  | NO        | 神目線の待ち牌の数           |
 | discarded_tiles_count      | integer  | NO        | 捨て牌にある待ち牌の数       |
 | dora_indicator_tiles_count | integer  | NO        | ドラ表示牌にある待ち牌の数   |
+
+### tenpai_agari_matrix（聴牌時のあがり可能性マトリックス）
+
+> [!NOTE]
+> 聴牌時のイベントに対して、各待ち牌ごとのロン・ツモあがりおよび役の可能性を記録する。
+
+**主キー**: id
+**外部キー**: tenpai_event_id -> event.id
+
+| カラム名             | データ型 | NULL 許可 | 説明                                   |
+| -------------------- | -------- | --------- | -------------------------------------- |
+| id                   | integer  | NO        | ID                                     |
+| tenpai_event_id      | integer  | NO        | 聴牌時のイベント ID                    |
+| waiting_tile         | varchar  | NO        | 待ち牌                                 |
+| available_tile_count | integer  | NO        | あがれる牌の残り枚数（神目線）         |
+| is_ron_agari         | boolean  | NO        | ロン想定か（false はツモあがりを表す） |
+
+### tenpai_yaku_event（聴牌時のあがり役）
+
+> [!NOTE]
+> tenpai_agari_matrix と結合して、各待ち牌であがった場合の役を参照できる。
+
+**複合主キー**: tenpai_agari_matrix_id, name_id
+**外部キー**: tenpai_agari_matrix_id -> tenpai_agari_matrix.id, name_id -> yaku_name.id
+
+| カラム名               | データ型 | NULL 許可 | 説明                        |
+| ---------------------- | -------- | --------- | --------------------------- |
+| tenpai_agari_matrix_id | integer  | NO        | あがり可能性マトリックス ID |
+| name_id                | integer  | NO        | 役の名前 ID                 |
+| han                    | integer  | NO        | 役の翻数                    |
 
 ### foul_play（反則行為・チョンボ）
 
