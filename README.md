@@ -30,6 +30,10 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 [こちらを参照ください。](./PAI_FORMAT.md)
 
+## 役名一覧
+
+[こちらを参照ください。](./YAKU_NAMES.md)
+
 ## 留意事項
 
 - データの正確性には注意をしていますが、間違いなどあれば Issue より報告いただけると助かります。
