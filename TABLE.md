@@ -270,20 +270,21 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id, target_player_id -> player.id
 
-| カラム名         | データ型 | NULL 許可 | 説明                                                           |
-| ---------------- | -------- | --------- | -------------------------------------------------------------- |
-| event_id         | integer  | NO        | イベント ID                                                    |
-| actor_player_id  | integer  | NO        | 和了したプレイヤー ID                                          |
-| target_player_id | integer  | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）               |
-| points           | integer  | NO        | リーチ棒や本場のポイントを含む和了時のポイント（加算ポイント） |
-| base_points      | integer  | NO        | リーチ棒や本場のポイントは含まれない和了時のポイント           |
-| winning_tile     | varchar  | NO        | ロン（放銃）牌もしくはツモあがり牌                             |
-| fu               | integer  | NO        | 合計の符                                                       |
-| han              | integer  | NO        | 合計の翻数                                                     |
-| is_called        | boolean  | NO        | 鳴いたあがりか（暗槓を含む）                                   |
-| is_menzen        | boolean  | NO        | 面前のあがりか                                                 |
-| is_yakuman       | boolean  | NO        | 役満か                                                         |
-| description      | varchar  | NO        | 役と点数の説明                                                 |
+| カラム名          | データ型                                             | NULL 許可 | 説明                                                           |
+| ----------------- | ---------------------------------------------------- | --------- | -------------------------------------------------------------- |
+| event_id          | integer                                              | NO        | イベント ID                                                    |
+| actor_player_id   | integer                                              | NO        | 和了したプレイヤー ID                                          |
+| target_player_id  | integer                                              | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）               |
+| points            | integer                                              | NO        | リーチ棒や本場のポイントを含む和了時のポイント（加算ポイント） |
+| base_points       | integer                                              | NO        | リーチ棒や本場のポイントは含まれない和了時のポイント           |
+| winning_tile      | varchar                                              | NO        | ロン（放銃）牌もしくはツモあがり牌                             |
+| winning_tile_type | ENUM(両面、単騎、カンチャン、ペンチャン、シャンポン) | NO        | あがり時の形                                                   |
+| fu                | integer                                              | NO        | 合計の符                                                       |
+| han               | integer                                              | NO        | 合計の翻数                                                     |
+| is_called         | boolean                                              | NO        | 鳴いたあがりか（暗槓を含む）                                   |
+| is_menzen         | boolean                                              | NO        | 面前のあがりか                                                 |
+| is_yakuman        | boolean                                              | NO        | 役満か                                                         |
+| description       | varchar                                              | NO        | 役と点数の説明                                                 |
 
 ##### agari_yaku_event（あがり時の役）
 
@@ -467,17 +468,17 @@
 **複合主キー**: event_id, player_id
 **外部キー**: event_id -> event.id, player_id -> player.id
 
-| カラム名                   | データ型 | NULL 許可                                                    | 説明                         |
-| -------------------------- | -------- | ------------------------------------------------------------ | ---------------------------- |
-| event_id                   | integer  | NO                                                           | イベント ID                  |
-| player_id                  | integer  | NO                                                           | プレイヤー ID                |
-| waiting_tiles              | varchar  | NO                                                           | 待ち牌                       |
-| waiting_type               | varchar  | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、複合形) | 待ちのタイプ                 |
-| tile_types_count           | integer  | NO                                                           | 待ち牌の種類                 |
-| ideal_tiles_count          | integer  | NO                                                           | 論理的な（平面の）待ち牌の数 |
-| available_tiles_count      | integer  | NO                                                           | 神目線の待ち牌の数           |
-| discarded_tiles_count      | integer  | NO                                                           | 捨て牌にある待ち牌の数       |
-| dora_indicator_tiles_count | integer  | NO                                                           | ドラ表示牌にある待ち牌の数   |
+| カラム名                   | データ型 | NULL 許可                                                                      | 説明                         |
+| -------------------------- | -------- | ------------------------------------------------------------------------------ | ---------------------------- |
+| event_id                   | integer  | NO                                                                             | イベント ID                  |
+| player_id                  | integer  | NO                                                                             | プレイヤー ID                |
+| waiting_tiles              | varchar  | NO                                                                             | 待ち牌                       |
+| waiting_type               | varchar  | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、ノベタン、亜両面、複合形) | 待ちのタイプ                 |
+| tile_types_count           | integer  | NO                                                                             | 待ち牌の種類                 |
+| ideal_tiles_count          | integer  | NO                                                                             | 論理的な（平面の）待ち牌の数 |
+| available_tiles_count      | integer  | NO                                                                             | 神目線の待ち牌の数           |
+| discarded_tiles_count      | integer  | NO                                                                             | 捨て牌にある待ち牌の数       |
+| dora_indicator_tiles_count | integer  | NO                                                                             | ドラ表示牌にある待ち牌の数   |
 
 ### tenpai_agari_matrix（聴牌時のあがり可能性マトリックス）
 
