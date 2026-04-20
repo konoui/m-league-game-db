@@ -15,6 +15,7 @@
   - [game_player_result（試合単位のプレイヤーの結果）](#game_player_result試合単位のプレイヤーの結果)
   - [kyoku_player_result（局単位のプレイヤーの結果）](#kyoku_player_result局単位のプレイヤーの結果)
   - [team_season_result（シーズン単位のチームの結果）](#team_season_resultシーズン単位のチームの結果)
+    - [player_season_stats_base（シーズン単位のプレイヤーの統計・絶対値）](#player_season_stats_baseシーズン単位のプレイヤーの統計絶対値)
     - [player_season_stats（シーズン単位のプレイヤーの統計）](#player_season_statsシーズン単位のプレイヤーの統計)
 - [イベントテーブル](#イベントテーブル)
   - [event（イベント）](#eventイベント)
@@ -190,36 +191,105 @@
 | base_points              | numeric                         | NO        | チームごとの game テーブルの points の合計                                                           |
 | final_points             | numeric                         | NO        | base_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
+#### player_season_stats_base（シーズン単位のプレイヤーの統計・絶対値）
+
+> [!Note]
+> ビュー。player_season_stats の元となる絶対値ビュー。
+> ステージをまたいだ集計など、パーセントでは正確に算出できない集計に使用する。
+> 複数ステージを合算する場合は win_count / total_kyoku_count などの絶対値を SUM してからパーセントを計算する。
+
+| カラム名                       | データ型                        | NULL 許可 | 説明                                                                                                        |
+| ------------------------------ | ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| start_season_year              | integer                         | NO        | シーズン開始年                                                                                              |
+| stage                          | ENUM(regular, semifinal, final) | NO        | ステージ                                                                                                    |
+| player_name                    | text                            | NO        | プレイヤー名                                                                                                |
+| team_name                      | text                            | NO        | チーム名                                                                                                    |
+| total_kyoku_count              | integer                         | NO        | 総局数                                                                                                      |
+| total_game_count               | integer                         | NO        | 総ゲーム数                                                                                                  |
+| win_count                      | integer                         | NO        | あがり回数                                                                                                  |
+| win_point_total                | integer                         | YES       | あがり打点の合計（本場・リーチ棒を含まない）                                                                |
+| tsumo_win_count                | integer                         | NO        | ツモあがり回数                                                                                              |
+| dealin_count                   | integer                         | NO        | 放銃回数                                                                                                    |
+| dealin_point_total             | integer                         | YES       | 放銃打点の合計                                                                                              |
+| hitsumo_count                  | integer                         | NO        | 被ツモ回数（他プレイヤーのツモ上がりで失点した回数）                                                        |
+| reach_count                    | integer                         | NO        | 立直回数（リーチ宣言が受理された回数）                                                                      |
+| reach_agari_count              | integer                         | NO        | リーチあがり回数                                                                                            |
+| furo_agari_count               | integer                         | NO        | 副露あがり回数                                                                                              |
+| reach_dealin_count             | integer                         | NO        | リーチ後放銃回数                                                                                            |
+| reach_declare_dealin_count     | integer                         | NO        | リーチ宣言時放銃回数（リーチ宣言が受理されなかった回数）                                                    |
+| furo_count                     | integer                         | NO        | 副露局数                                                                                                    |
+| ryukyoku_count                 | integer                         | NO        | 流局回数                                                                                                    |
+| tenpai_count                   | integer                         | NO        | 流局時聴牌回数                                                                                              |
+| tenpai_point_total             | integer                         | YES       | 流局時テンパイ料収支の合計                                                                                  |
+| dora_total                     | integer                         | NO        | あがり時ドラ枚数合計（赤、裏除く）                                                                          |
+| aka_dora_total                 | integer                         | NO        | あがり時赤ドラ枚数合計                                                                                      |
+| ura_dora_total                 | integer                         | NO        | あがり時裏ドラ枚数合計                                                                                      |
+| ura_dora_win_count             | integer                         | NO        | あがり時裏ドラ枚数合計                                                                                      |
+| renchan_count                  | integer                         | NO        | 連荘回数（親番であがりまたは聴牌流局した局数）                                                              |
+| oya_kyoku_count                | integer                         | NO        | 親局数                                                                                                      |
+| oya_kaburi_count               | integer                         | NO        | 親被り回数（親番でツモあがりされた回数）                                                                    |
+| itai_oya_kaburi_count          | integer                         | NO        | 親の時に満貫以上の親被りをした回数                                                                          |
+| itai_oya_kaburi_point_total    | integer                         | YES       | 親の時に満貫以上の親被りをしたポイントの合計                                                                |
+| carryover_kyotaku_point_total  | integer                         | NO        | 供託回収のうち、あがり時に持ち越されていた立直棒（供託）の合計                                              |
+| tsuminashi_kyotaku_point_total | integer                         | NO        | 供託回収のうち、あがり時の立直棒すべて（持ち越し＋あがった局で他者が出した分）の合計                        |
+| kyotaku_point_total            | integer                         | NO        | 供託回収のうち、本場の加点あり、リーチ棒あり供託の合計（tsuminashi_kyotaku_point_total + 本場の加点の合計） |
+| rank1_count                    | integer                         | NO        | 一位回数                                                                                                    |
+| rank2_count                    | integer                         | NO        | 二位回数                                                                                                    |
+| rank3_count                    | integer                         | NO        | 三位回数                                                                                                    |
+| rank4_count                    | integer                         | NO        | 四位回数                                                                                                    |
+| best_score                     | integer                         | YES       | ベストスコア                                                                                                |
+| total_points                   | numeric                         | YES       | 累計ポイント                                                                                                |
+
 #### player_season_stats（シーズン単位のプレイヤーの統計）
 
 > [!Note]
-> ビュー
+> ビュー。player_season_stats_base を元にパーセントや平均を算出したビュー。
 
-| カラム名                | データ型                        | NULL 許可 | 説明                       |
-| ----------------------- | ------------------------------- | --------- | -------------------------- |
-| start_season_year       | integer                         | NO        | シーズン開始年             |
-| stage                   | ENUM(regular, semifinal, final) | NO        | ステージ                   |
-| player_name             | text                            | NO        | プレイヤー名               |
-| team_name               | text                            | NO        | チーム名                   |
-| total_kyoku_count       | integer                         | NO        | 総局数                     |
-| total_game_count        | integer                         | NO        | 総ゲーム数                 |
-| win_rate_percent        | numeric                         | YES       | 和了率（パーセント）       |
-| dealin_rate_percent     | numeric                         | YES       | 放銃率（パーセント）       |
-| furo_rate_percent       | numeric                         | YES       | 副露率（パーセント）       |
-| reach_rate_percent      | numeric                         | YES       | 立直率（パーセント）       |
-| ryukyoku_rate_percent   | numeric                         | YES       | 流局率（パーセント）       |
-| tenpai_rate_percent     | numeric                         | YES       | 流局時聴牌率（パーセント） |
-| tenpai_point_balance    | numeric                         | YES       | 流局時テンパイ料収支       |
-| rank1_count             | integer                         | YES       | 一位回数                   |
-| rank2_count             | integer                         | YES       | 二位回数                   |
-| rank3_count             | integer                         | YES       | 三位回数                   |
-| rank4_count             | integer                         | YES       | 四位回数                   |
-| top_rate_percent        | numeric                         | YES       | トップ率（パーセント）     |
-| top2_rate_percent       | numeric                         | YES       | 連対率（パーセント）       |
-| avoid_last_rate_percent | numeric                         | YES       | ラス回避率（パーセント）   |
-| best_score              | integer                         | YES       | ベストスコア               |
-| avg_win_points          | numeric                         | YES       | 平均打点                   |
-| avg_dealin_points       | numeric                         | YES       | 放銃平均打点               |
+| カラム名                        | データ型                        | NULL 許可 | 説明                                                                                                        |
+| ------------------------------- | ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| start_season_year               | integer                         | NO        | シーズン開始年                                                                                              |
+| stage                           | ENUM(regular, semifinal, final) | NO        | ステージ                                                                                                    |
+| player_name                     | text                            | NO        | プレイヤー名                                                                                                |
+| team_name                       | text                            | NO        | チーム名                                                                                                    |
+| total_game_count                | integer                         | NO        | 総ゲーム数                                                                                                  |
+| win_rate_percent                | numeric                         | YES       | あがり率（パーセント）                                                                                      |
+| tsumo_win_rate_percent          | numeric                         | YES       | ツモあがり率（パーセント）                                                                                  |
+| reach_agari_in_win_rate_percent | numeric                         | YES       | リーチあがり率（パーセント）                                                                                |
+| furo_agari_in_win_rate_percent  | numeric                         | YES       | 副露あがり率（パーセント）                                                                                  |
+| dama_agari_in_win_rate_percent  | numeric                         | YES       | ダマあがり率（パーセント）                                                                                  |
+| dealin_rate_percent             | numeric                         | YES       | 放銃率（パーセント）                                                                                        |
+| hitsumo_rate_percent            | numeric                         | YES       | 被ツモ率（パーセント）                                                                                      |
+| furo_rate_percent               | numeric                         | YES       | 副露率（パーセント）                                                                                        |
+| reach_rate_percent              | numeric                         | YES       | 立直率（パーセント）                                                                                        |
+| reach_agari_rate_percent        | numeric                         | YES       | 立直成立後のあがり率（パーセント）                                                                          |
+| ryukyoku_rate_percent           | numeric                         | YES       | 流局率（パーセント）                                                                                        |
+| tenpai_rate_percent             | numeric                         | YES       | 流局時聴牌率（パーセント）                                                                                  |
+| tenpai_point_balance            | numeric                         | YES       | 流局時テンパイ料収支                                                                                        |
+| avg_dora_num                    | numeric                         | YES       | あがり時平均ドラ数（赤、裏除く）                                                                            |
+| avg_aka_dora_num                | numeric                         | YES       | あがり時平均赤ドラ数                                                                                        |
+| avg_ura_dora_num                | numeric                         | YES       | あがり時平均裏ドラ数                                                                                        |
+| ura_dora_nori_rate_percent      | numeric                         | YES       | あがり時裏ドラが乗った率（パーセント）                                                                      |
+| avg_all_dora_num                | numeric                         | YES       | あがり時平均全ドラ数                                                                                        |
+| renchan_rate_percent            | numeric                         | YES       | 連荘率                                                                                                      |
+| oya_kaburi_rate_percent         | numeric                         | YES       | 親被り率                                                                                                    |
+| itai_oya_kaburi_rate_percent    | numeric                         | YES       | 痛い親被り率（親被り中のパーセント）                                                                        |
+| reach_dealin_rate_percent       | numeric                         | YES       | リーチ後放銃率（立直成立後のパーセント）                                                                    |
+| reach_declare_dealin_count      | integer                         | NO        | リーチ宣言時放銃回数                                                                                        |
+| carryover_kyotaku_point_total   | integer                         | NO        | 供託回収のうち、あがり時に持ち越されていた立直棒（供託）の合計                                              |
+| tsuminashi_kyotaku_point_total  | integer                         | NO        | 供託回収のうち、あがり時の立直棒すべて（持ち越し＋あがった局で他者が出した分）の合計                        |
+| kyotaku_point_total             | integer                         | NO        | 供託回収のうち、本場の加点あり、リーチ棒あり供託の合計（tsuminashi_kyotaku_point_total + 本場の加点の合計） |
+| rank1_count                     | integer                         | NO        | 一位回数                                                                                                    |
+| rank2_count                     | integer                         | NO        | 二位回数                                                                                                    |
+| rank3_count                     | integer                         | NO        | 三位回数                                                                                                    |
+| rank4_count                     | integer                         | NO        | 四位回数                                                                                                    |
+| top_rate_percent                | numeric                         | YES       | トップ率（パーセント）                                                                                      |
+| top2_rate_percent               | numeric                         | YES       | 連対率（パーセント）                                                                                        |
+| avoid_last_rate_percent         | numeric                         | YES       | ラス回避率（パーセント）                                                                                    |
+| best_score                      | integer                         | YES       | ベストスコア                                                                                                |
+| avg_win_points                  | numeric                         | YES       | 平均打点                                                                                                    |
+| avg_dealin_points               | numeric                         | YES       | 放銃平均打点                                                                                                |
+| total_points                    | numeric                         | YES       | 累計ポイント                                                                                                |
+| yokomove_rate_percent           | numeric                         | YES       | 横移動率（他者がロンあがりし自分が無関係な局のパーセント）                                                  |
 
 ## イベントテーブル
 
@@ -270,21 +340,21 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id, target_player_id -> player.id
 
-| カラム名          | データ型                                             | NULL 許可 | 説明                                                           |
-| ----------------- | ---------------------------------------------------- | --------- | -------------------------------------------------------------- |
-| event_id          | integer                                              | NO        | イベント ID                                                    |
-| actor_player_id   | integer                                              | NO        | 和了したプレイヤー ID                                          |
-| target_player_id  | integer                                              | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）               |
-| points            | integer                                              | NO        | リーチ棒や本場のポイントを含む和了時のポイント（加算ポイント） |
-| base_points       | integer                                              | NO        | リーチ棒や本場のポイントは含まれない和了時のポイント           |
-| winning_tile      | varchar                                              | NO        | ロン（放銃）牌もしくはツモあがり牌                             |
-| winning_tile_type | ENUM(両面、単騎、カンチャン、ペンチャン、シャンポン) | NO        | あがり時の形                                                   |
-| fu                | integer                                              | NO        | 合計の符                                                       |
-| han               | integer                                              | NO        | 合計の翻数                                                     |
-| is_called         | boolean                                              | NO        | 鳴いたあがりか（暗槓を含む）                                   |
-| is_menzen         | boolean                                              | NO        | 面前のあがりか                                                 |
-| is_yakuman        | boolean                                              | NO        | 役満か                                                         |
-| description       | varchar                                              | NO        | 役と点数の説明                                                 |
+| カラム名          | データ型                                             | NULL 許可 | 説明                                                             |
+| ----------------- | ---------------------------------------------------- | --------- | ---------------------------------------------------------------- |
+| event_id          | integer                                              | NO        | イベント ID                                                      |
+| actor_player_id   | integer                                              | NO        | あがったプレイヤー ID                                            |
+| target_player_id  | integer                                              | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）                 |
+| points            | integer                                              | NO        | リーチ棒や本場のポイントを含むあがり時のポイント（加算ポイント） |
+| base_points       | integer                                              | NO        | リーチ棒や本場のポイントは含まれないあがり時のポイント           |
+| winning_tile      | varchar                                              | NO        | ロン（放銃）牌もしくはツモあがり牌                               |
+| winning_tile_type | ENUM(両面、単騎、カンチャン、ペンチャン、シャンポン) | NO        | あがり時の形                                                     |
+| fu                | integer                                              | NO        | 合計の符                                                         |
+| han               | integer                                              | NO        | 合計の翻数                                                       |
+| is_called         | boolean                                              | NO        | 鳴いたあがりか（暗槓を含む）                                     |
+| is_menzen         | boolean                                              | NO        | 面前のあがりか                                                   |
+| is_yakuman        | boolean                                              | NO        | 役満か                                                           |
+| description       | varchar                                              | NO        | 役と点数の説明                                                   |
 
 ##### agari_yaku_event（あがり時の役）
 
