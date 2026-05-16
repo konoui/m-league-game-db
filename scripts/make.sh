@@ -8,5 +8,6 @@
     ./scripts/make-table-toc.py
     rm -f ./query-examples/*
     cp ./../m-league-sql-summarizer/markdown/* ./query-examples/
+    cp ./../m-league-sql-summarizer/scripts/query-helper.sh  ./scripts/query-helper.sh
     ./scripts/make-query-readme.sh
 )

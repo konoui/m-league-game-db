@@ -157,23 +157,23 @@
 | -------------- | -------- | --------- | ---------------------------------- |
 | game_id        | integer  | NO        | 試合 ID                            |
 | player_id      | integer  | NO        | プレイヤー ID                      |
-| score          | integer  | NO        | 麻雀の持ち点を表すスコア           |
+| score          | integer  | NO        | 終了時の持ち点（スコア）           |
 | points         | numeric  | NO        | 順位点を加味したポイント           |
 | penalty_points | numeric  | NO        | チョンボなど減点を表す反則ポイント |
-| rank           | integer  | NO        | 順位                               |
+| rank           | integer  | NO        | 終了時の順位                       |
 
 ### kyoku_player_result（局単位のプレイヤーの結果）
 
 **複合主キー**: kyoku_id, player_id
 **外部キー**: kyoku_id -> kyoku.id, player_id -> player.id
 
-| カラム名    | データ型             | NULL 許可 | 説明          |
-| ----------- | -------------------- | --------- | ------------- |
-| kyoku_id    | integer              | NO        | 局 ID         |
-| player_id   | integer              | NO        | プレイヤー ID |
-| score       | integer              | NO        | スコア        |
-| player_wind | ENUM(1z, 2z, 3z, 4z) | NO        | 自風          |
-| rank        | integer              | NO        | 順位          |
+| カラム名    | データ型             | NULL 許可 | 説明             |
+| ----------- | -------------------- | --------- | ---------------- |
+| kyoku_id    | integer              | NO        | 局 ID            |
+| player_id   | integer              | NO        | プレイヤー ID    |
+| score       | integer              | NO        | 局終了時のスコア |
+| player_wind | ENUM(1z, 2z, 3z, 4z) | NO        | 自風             |
+| rank        | integer              | NO        | 局終了時の順位   |
 
 ## イベントテーブル
 
@@ -271,18 +271,18 @@
 | ryukyoku_event_id | integer  | NO        | 流局時のイベント ID                             |
 | player_id         | integer  | NO        | プレイヤー ID                                   |
 | is_tenpai         | boolean  | NO        | 聴牌か（false はノーテンを表す）                |
-| point             | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
+| points            | integer  | NO        | 聴牌・ノーテン時のポイント移動(-3000 から 3000) |
 
 #### reach_event（リーチイベント）
 
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
 
-| カラム名        | データ型 | NULL 許可 | 説明                                                                                             |
-| --------------- | -------- | --------- | ------------------------------------------------------------------------------------------------ |
-| event_id        | integer  | NO        | イベント ID                                                                                      |
-| actor_player_id | integer  | NO        | リーチプレイヤー ID                                                                              |
-| is_accepted     | boolean  | NO        | リーチ宣言が受け入れられたかのフラグ。false であればリーチ宣言で放銃した（ロンされた）と言える。 |
+| カラム名        | データ型 | NULL 許可 | 説明                                                                               |
+| --------------- | -------- | --------- | ---------------------------------------------------------------------------------- |
+| event_id        | integer  | NO        | イベント ID                                                                        |
+| actor_player_id | integer  | NO        | リーチプレイヤー ID                                                                |
+| is_accepted     | boolean  | NO        | リーチ宣言が受け入れられたかのフラグ。false であればリーチ宣言で放銃（ロン）を表す |
 
 #### discard_event（打牌イベント）
 
@@ -403,7 +403,7 @@
 | event_id                       | integer  | NO        | イベント ID                                                                |
 | player_id                      | integer  | NO        | プレイヤー ID                                                              |
 | hand                           | varchar  | NO        | 手牌                                                                       |
-| called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック                                                   |
+| called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック（,区切り）                                        |
 | shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）         |
 | standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                       |
 | seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                         |
@@ -442,13 +442,13 @@
 **主キー**: id
 **外部キー**: tenpai_event_id -> event.id
 
-| カラム名             | データ型 | NULL 許可 | 説明                                   |
-| -------------------- | -------- | --------- | -------------------------------------- |
-| id                   | integer  | NO        | ID                                     |
-| tenpai_event_id      | integer  | NO        | 聴牌時のイベント ID                    |
-| waiting_tile         | varchar  | NO        | 待ち牌                                 |
-| available_tile_count | integer  | NO        | あがれる牌の残り枚数（神目線）         |
-| is_ron_agari         | boolean  | NO        | ロン想定か（false はツモあがりを表す） |
+| カラム名             | データ型 | NULL 許可 | 説明                                         |
+| -------------------- | -------- | --------- | -------------------------------------------- |
+| id                   | integer  | NO        | ID                                           |
+| tenpai_event_id      | integer  | NO        | 聴牌時のイベント ID                          |
+| waiting_tile         | varchar  | NO        | 待ち牌                                       |
+| available_tile_count | integer  | NO        | あがれる牌の残り枚数（神目線）               |
+| is_ron_agari         | boolean  | NO        | ロンあがり想定か（false はツモあがりを表す） |
 
 ### tenpai_yaku_event（聴牌時のあがり役）
 
@@ -495,7 +495,7 @@
 | league_season_start_year | integer                         | NO        | シーズンの開始年度                                                                                   |
 | league_season_end_year   | integer                         | NO        | シーズンの終了年度                                                                                   |
 | stage                    | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                         |
-| base_points              | numeric                         | NO        | チームごとの game テーブルの points の合計                                                           |
+| base_points              | numeric                         | NO        | チームごとの順位点を加味したポイント                                                                 |
 | final_points             | numeric                         | NO        | base_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する |
 
 ### player_season_stage_stats_base（シーズンステージ単位のプレイヤーの統計・絶対値）
@@ -545,7 +545,7 @@
 | rank3_count                    | integer                         | NO        | 三位回数                                                                                                    |
 | rank4_count                    | integer                         | NO        | 四位回数                                                                                                    |
 | best_score                     | integer                         | YES       | ベストスコア                                                                                                |
-| total_points                   | numeric                         | YES       | 累計ポイント                                                                                                |
+| total_points                   | numeric                         | YES       | 順位点を加味した累計ポイントト                                                                              |
 
 ### player_season_stage_stats（シーズンステージ単位のプレイヤーの統計）
 
@@ -595,5 +595,5 @@
 | best_score                      | integer                         | YES       | ベストスコア                                                                                                |
 | avg_win_points                  | numeric                         | YES       | 平均打点                                                                                                    |
 | avg_dealin_points               | numeric                         | YES       | 放銃平均打点                                                                                                |
-| total_points                    | numeric                         | YES       | 累計ポイント                                                                                                |
+| total_points                    | numeric                         | YES       | 順位点を加味した累計ポイント                                                                                |
 | yokomove_rate_percent           | numeric                         | YES       | 横移動率（他者がロンあがりし自分が無関係な局のパーセント）                                                  |
