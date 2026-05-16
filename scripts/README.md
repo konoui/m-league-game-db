@@ -33,3 +33,12 @@ Markdown ファイル内の SQL クエリの抽出・実行・検証を行うユ
 # 全ファイルの実行・検証（README.md は自動スキップ）
 ./scripts/query-helper.sh run-all <db-file> <query-examples-dir>
 ```
+
+## total-records.sh
+
+全てのテーブルの合計レコード数を出力するユーティリティ。
+
+```bash
+./scripts/total-records.sh database.sqlite3
+9034370
+```
