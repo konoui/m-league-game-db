@@ -2,11 +2,12 @@
 
 ## make.sh
 
-外部リポジトリからデータベースファイル・テーブル定義・クエリ例をコピーし、目次や README を再生成する。
+外部リポジトリからデータベースファイル・クエリ例をコピーし、テーブル定義・目次・README を再生成する。
 
-### make-table-toc.py
+### make-table-doc.py
 
-`TABLE.md` 内の見出しから目次（TOC）を自動生成し、ファイルに埋め込む。
+`m-converter` の `table-doc.yaml` からテーブル定義ドキュメント `TABLE.md` を目次込みで生成する。
+YAML が定義の正とし、表形式・目次のフォーマットはこのスクリプトが正。
 make.sh から呼ばれる。
 
 ### make-query-readme.sh

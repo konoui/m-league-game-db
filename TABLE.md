@@ -106,7 +106,7 @@
 > プレイヤーは移籍や再契約のため、年度によって別のチームに所属する可能性がある。
 > SQL クエリでは考慮する必要がある。
 
-**複合主キー**: player_id, team_id
+**複合主キー**: team_id, player_id, joined_season_year
 **外部キー**: player_id -> player.id, team_id -> team.id
 
 | カラム名           | データ型 | NULL 許可 | 説明               |
@@ -179,7 +179,7 @@
 
 ### event（イベント）
 
-> [!Note]
+> [!NOTE]
 > 具体的なイベントの内容は、各種イベントテーブルと結合して参照する。
 
 **主キー**: id
@@ -422,17 +422,17 @@
 **複合主キー**: event_id, player_id
 **外部キー**: event_id -> event.id, player_id -> player.id
 
-| カラム名                   | データ型 | NULL 許可                                                                      | 説明                         |
-| -------------------------- | -------- | ------------------------------------------------------------------------------ | ---------------------------- |
-| event_id                   | integer  | NO                                                                             | イベント ID                  |
-| player_id                  | integer  | NO                                                                             | プレイヤー ID                |
-| waiting_tiles              | varchar  | NO                                                                             | 待ち牌                       |
-| waiting_type               | varchar  | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、ノベタン、亜両面、複合形) | 待ちのタイプ                 |
-| tile_types_count           | integer  | NO                                                                             | 待ち牌の種類                 |
-| ideal_tiles_count          | integer  | NO                                                                             | 論理的な（平面の）待ち牌の数 |
-| available_tiles_count      | integer  | NO                                                                             | 神目線の待ち牌の数           |
-| discarded_tiles_count      | integer  | NO                                                                             | 捨て牌にある待ち牌の数       |
-| dora_indicator_tiles_count | integer  | NO                                                                             | ドラ表示牌にある待ち牌の数   |
+| カラム名                   | データ型                                                                       | NULL 許可 | 説明                         |
+| -------------------------- | ------------------------------------------------------------------------------ | --------- | ---------------------------- |
+| event_id                   | integer                                                                        | NO        | イベント ID                  |
+| player_id                  | integer                                                                        | NO        | プレイヤー ID                |
+| waiting_tiles              | varchar                                                                        | NO        | 待ち牌                       |
+| waiting_type               | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、ノベタン、亜両面、複合形) | NO        | 待ちのタイプ                 |
+| tile_types_count           | integer                                                                        | NO        | 待ち牌の種類                 |
+| ideal_tiles_count          | integer                                                                        | NO        | 論理的な（平面の）待ち牌の数 |
+| available_tiles_count      | integer                                                                        | NO        | 神目線の待ち牌の数           |
+| discarded_tiles_count      | integer                                                                        | NO        | 捨て牌にある待ち牌の数       |
+| dora_indicator_tiles_count | integer                                                                        | NO        | ドラ表示牌にある待ち牌の数   |
 
 ### tenpai_agari_matrix（聴牌時のあがり可能性マトリックス）
 
@@ -483,7 +483,7 @@
 
 ### team_season_stage_result（シーズンステージ単位のチームの結果）
 
-> [!Note]
+> [!NOTE]
 > ビュー
 
 **主キー**: id
@@ -500,7 +500,7 @@
 
 ### player_season_stage_stats_base（シーズンステージ単位のプレイヤーの統計・絶対値）
 
-> [!Note]
+> [!NOTE]
 > ビュー。player_season_stage_stats の元となる絶対値ビュー。
 > ステージをまたいだ集計など、パーセントでは正確に算出できない集計に使用する。
 > 複数ステージを合算する場合は win_count / total_kyoku_count などの絶対値を SUM してからパーセントを計算する。
@@ -549,7 +549,7 @@
 
 ### player_season_stage_stats（シーズンステージ単位のプレイヤーの統計）
 
-> [!Note]
+> [!NOTE]
 > ビュー。player_season_stage_stats_base を元にパーセントや平均を算出したビュー。
 
 | カラム名                        | データ型                        | NULL 許可 | 説明                                                                                                        |
