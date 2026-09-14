@@ -15,5 +15,24 @@
     "kyoku",
     "event",
     "reach_event"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "試合日",
+      "試合番号"
+    ],
+    "rows": {
+      "max": 10
+    },
+    "rules": [
+      "シーズン年 BETWEEN 2018 AND 2100",
+      "ステージ IN ('regular', 'semifinal', 'final')",
+      "試合日 GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'",
+      "プレイヤー1 IS NOT NULL",
+      "プレイヤー2 IS NOT NULL",
+      "プレイヤー3 IS NOT NULL",
+      "プレイヤー4 IS NOT NULL",
+      "リーチ回数合計 BETWEEN 1 AND 総局数 * 4"
+    ]
+  }
 }

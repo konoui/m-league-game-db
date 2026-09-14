@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PostToolUse hook: queries/<description>/ 配下を編集したら、そのクエリを validate.py で検証する。
 
+meta.json がまだないディレクトリは作成途中とみなして検証しない（Stop hook で検証される）。
 失敗時は exit 2 で検証結果を Claude に返す。
 """
 
@@ -19,7 +20,7 @@ def main():
     if not file_path:
         return
     path = Path(file_path).resolve()
-    if path.parent.parent != QUERIES_DIR:
+    if path.parent.parent != QUERIES_DIR or not (path.parent / "meta.json").exists():
         return
 
     cmd = ["uv", "run", "--quiet", str(ROOT / "scripts" / "validate.py"), str(path.parent)]

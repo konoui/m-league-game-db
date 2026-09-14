@@ -19,5 +19,28 @@
     "player_team",
     "team",
     "game_player_result"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "start_year",
+      "stage",
+      "player_name"
+    ],
+    "rules": [
+      "start_year BETWEEN 2018 AND 2100",
+      "stage IN ('regular', 'semifinal', 'final')",
+      "player_name IS NOT NULL",
+      "team_name IS NOT NULL",
+      "total_reach_count >= 10",
+      "successful_reach_count BETWEEN 0 AND total_reach_count",
+      "reach_success_rate BETWEEN 0 AND 100",
+      "top_rate BETWEEN 0 AND 100",
+      "top2_rate BETWEEN 0 AND 100",
+      "top_rate <= top2_rate",
+      "total_games >= 1",
+      "avg_rank BETWEEN 1 AND 4",
+      "reach_efficiency_category IN ('High', 'Medium', 'Low')",
+      "performance_category IN ('Strong', 'Average', 'Weak')"
+    ]
+  }
 }

@@ -12,5 +12,21 @@
     "game",
     "season_stage",
     "league_season"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "試合日",
+      "プレイヤー名"
+    ],
+    "rows": {
+      "max": 5
+    },
+    "rules": [
+      "シーズン GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'",
+      "ステージ IN ('regular', 'semifinal', 'final')",
+      "試合日 GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'",
+      "プレイヤー名 IS NOT NULL",
+      "点数 BETWEEN -100000 AND 100000"
+    ]
+  }
 }

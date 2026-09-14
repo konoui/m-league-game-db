@@ -17,5 +17,28 @@
     "kyoku",
     "event",
     "agari_event"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "season",
+      "stage",
+      "player_name"
+    ],
+    "rules": [
+      "season BETWEEN 2018 AND 2100",
+      "stage IN ('regular', 'semifinal', 'final')",
+      "player_name IS NOT NULL",
+      "total_games >= 10",
+      "houjuu_rate BETWEEN 0 AND 100",
+      "agari_rate BETWEEN 0 AND 100",
+      "defensive_efficiency BETWEEN 0 AND 100",
+      "rentai_rate BETWEEN 0 AND 100",
+      "last_avoidance_rate BETWEEN 0 AND 100",
+      "avg_rank BETWEEN 1 AND 4",
+      "first_place_count <= rentai_count",
+      "rentai_count <= total_games",
+      "last_place_count <= total_games",
+      "rentai_count + last_place_count <= total_games"
+    ]
+  }
 }

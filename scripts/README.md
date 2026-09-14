@@ -23,6 +23,7 @@ uv run scripts/validate.py --no-run
 - `query.sql` の末尾の `;`、コメント（CTE の直前など）
 - SQL が読み取り専用の 1 文で、エラーなく 1 行以上返すか
 - `tables` が SQL の実際の参照テーブル（SQLite の authorizer で取得）と一致するか
+- 結果が `checks` の不変条件（一意キー、行数、行ごとの条件式）を満たすか
 
 ## render.py
 

@@ -20,5 +20,24 @@
     "league_season",
     "player_team",
     "team"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "シーズン",
+      "ステージ",
+      "プレイヤー名"
+    ],
+    "rules": [
+      "シーズン GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'",
+      "ステージ IN ('regular', 'semifinal', 'final')",
+      "プレイヤー名 IS NOT NULL",
+      "チーム名 IS NOT NULL",
+      "リーチ回数 >= 1",
+      "平均リーチ巡目 >= 0",
+      "序盤リーチ率 BETWEEN 0 AND 100",
+      "中盤リーチ率 BETWEEN 0 AND 100",
+      "終盤リーチ率 BETWEEN 0 AND 100",
+      "ABS(序盤リーチ率 + 中盤リーチ率 + 終盤リーチ率 - 100) <= 0.1"
+    ]
+  }
 }

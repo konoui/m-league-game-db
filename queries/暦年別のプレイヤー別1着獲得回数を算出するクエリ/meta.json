@@ -14,5 +14,18 @@
     "league_season",
     "player_team",
     "team"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "暦年",
+      "プレイヤー名",
+      "チーム名"
+    ],
+    "rules": [
+      "暦年 GLOB '[0-9][0-9][0-9][0-9]'",
+      "プレイヤー名 IS NOT NULL",
+      "チーム名 IS NOT NULL",
+      "\"1着獲得回数\" >= 1"
+    ]
+  }
 }

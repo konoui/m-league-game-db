@@ -16,5 +16,18 @@
     "game_player_result",
     "game",
     "season_stage"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "シーズン",
+      "プレイヤー1",
+      "プレイヤー2"
+    ],
+    "rules": [
+      "シーズン IS NOT NULL",
+      "プレイヤー1 IS NOT NULL",
+      "プレイヤー2 IS NOT NULL",
+      "プレイヤー1 <> プレイヤー2"
+    ]
+  }
 }

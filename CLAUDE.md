@@ -4,7 +4,7 @@ M リーグの試合情報 SQLite データベースの配布と、そのデー�
 
 ## 構成
 
-- `queries/<description>/`: クエリ例の正。`query.sql`（SQL 本体）と `meta.json`（description, plan, tables）
+- `queries/<description>/`: クエリ例の正。`query.sql`（SQL 本体）と `meta.json`（description, plan, tables, checks）
 - `schema/meta.schema.json`: `meta.json` の JSON Schema
 - `query-examples/`: `queries/` から生成する公開用 Markdown。**手で編集しない**
 - `TABLE.md`, `PAI_FORMAT.md`, `YAKU_NAMES.md`: `scripts/make.sh` で外部リポジトリからコピー・生成する。直接編集しない
@@ -16,7 +16,10 @@ M リーグの試合情報 SQLite データベースの配布と、そのデー�
 - 既存クエリの見直し: `review-query` skill
 - 形式・命名・品質基準: `.claude/skills/create-query/references/query-format.md`
 
-`queries/` 配下を編集すると、PostToolUse hook が `scripts/validate.py` を実行する。
+hook（`.claude/settings.json`）:
+
+- PostToolUse: `queries/` 配下を編集すると、そのクエリを `scripts/validate.py` で検証する
+- Stop: 未コミットの変更があれば、変更したクエリの検証（schema や validate.py の変更時は全件）と `render.py --check` を実行し、失敗したら作業を続けさせる
 
 ## コマンド
 

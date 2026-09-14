@@ -44,6 +44,10 @@ def render_readme(names: list[str]) -> str:
 
 def build() -> dict[str, str]:
     dirs = sorted(p for p in QUERIES_DIR.iterdir() if p.is_dir())
+    incomplete = [d for d in dirs if not ((d / "meta.json").is_file() and (d / "query.sql").is_file())]
+    if incomplete:
+        names = "\n".join(f"  queries/{d.name}" for d in incomplete)
+        sys.exit(f"query.sql と meta.json がそろっていないクエリがあります:\n{names}")
     files = {f"{d.name}.md": render_query(d) for d in dirs}
     files["README.md"] = render_readme([d.name for d in dirs])
     return files

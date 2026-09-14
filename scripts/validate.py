@@ -117,7 +117,7 @@ def check_sql_style(r: Result, sql: str):
                 r.error(f"query.sql {i + 1} 行目: CTE の直前に目的を説明する -- コメントがありません: {line.strip()}")
 
 
-def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: float) -> set[str] | None:
+def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: float) -> tuple[set[str], list[str], list[tuple]] | None:
     conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     read_tables: set[str] = set()
     denied: list[str] = []
@@ -137,6 +137,7 @@ def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: floa
     try:
         cur = conn.execute(sql)  # 複数文は ProgrammingError になる
         rows = cur.fetchall()
+        columns = [c[0] for c in cur.description]
     except (sqlite3.Error, sqlite3.Warning) as e:
         if denied:
             r.error(f"読み取り以外の操作は禁止です（SQLite action code: {', '.join(denied)}）")
@@ -151,7 +152,55 @@ def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: floa
     if not rows:
         r.error("結果が 0 行です")
     r.notes.append(f"{len(rows)} rows, {elapsed:.2f}s")
-    return read_tables
+    return read_tables, columns, rows
+
+
+def quote(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def check_result(r: Result, checks: dict, columns: list[str], rows: list[tuple]):
+    """meta.json の checks（結果の不変条件）を検査する。結果をメモリ上の SQLite に読み込んで評価する。"""
+    if dup := sorted({c for c in columns if columns.count(c) > 1}):
+        r.error(f"出力カラム名が重複しています: {', '.join(dup)}")
+        return
+
+    row_limits = checks.get("rows", {})
+    if "min" in row_limits and len(rows) < row_limits["min"]:
+        r.error(f"結果の行数 {len(rows)} が checks.rows.min={row_limits['min']} を下回ります")
+    if "max" in row_limits and len(rows) > row_limits["max"]:
+        r.error(f"結果の行数 {len(rows)} が checks.rows.max={row_limits['max']} を超えます")
+
+    mem = sqlite3.connect(":memory:")
+    # "存在しないカラム" が文字列リテラルとして扱われ、ルールが素通りするのを防ぐ
+    mem.setconfig(sqlite3.SQLITE_DBCONFIG_DQS_DML, False)
+    mem.setconfig(sqlite3.SQLITE_DBCONFIG_DQS_DDL, False)
+    mem.execute(f"CREATE TABLE result ({', '.join(map(quote, columns))})")
+    mem.executemany(f"INSERT INTO result VALUES ({', '.join('?' * len(columns))})", rows)
+
+    unique = checks.get("unique", [])
+    if missing := [c for c in unique if c not in columns]:
+        r.error(f"checks.unique のカラムが結果にありません: {', '.join(missing)}（出力カラム: {', '.join(columns)}）")
+    elif unique:
+        keys = ", ".join(map(quote, unique))
+        dups = mem.execute(f"SELECT {keys}, COUNT(*) FROM result GROUP BY {keys} HAVING COUNT(*) > 1").fetchall()
+        if dups:
+            r.error(f"checks.unique ({', '.join(unique)}) が重複する行が {len(dups)} 組あります。例: {dups[0][:-1]} が {dups[0][-1]} 行")
+
+    for i, rule in enumerate(checks.get("rules", [])):
+        if ";" in rule:
+            r.error(f"checks.rules[{i}] に ; は使えません: {rule}")
+            continue
+        try:
+            (count,) = mem.execute(f"SELECT COUNT(*) FROM result WHERE NOT ({rule})").fetchone()
+            example = mem.execute(f"SELECT * FROM result WHERE NOT ({rule}) LIMIT 1").fetchone()
+        except sqlite3.Error as e:
+            r.error(f"checks.rules[{i}] を評価できません（{e}）: {rule}")
+            continue
+        if count:
+            sample = ", ".join(f"{c}={v!r}" for c, v in zip(columns, example))
+            r.error(f"checks.rules[{i}] に違反する行が {count} 行あります: {rule}\n    例: {sample}")
+    mem.close()
 
 
 def check_tables(r: Result, meta_path: Path, meta: dict, read_tables: set[str], fix: bool):
@@ -222,9 +271,12 @@ def main():
                 check_meta(r, d, meta, schema_validator)
             check_sql_style(r, sql)
             if run:
-                read_tables = run_sql(r, sql, db, known_tables, args.timeout)
-                if read_tables is not None and isinstance(meta, dict):
+                result = run_sql(r, sql, db, known_tables, args.timeout)
+                if result is not None and isinstance(meta, dict):
+                    read_tables, columns, rows = result
                     check_tables(r, meta_path, meta, read_tables, args.fix)
+                    if isinstance(meta.get("checks"), dict):
+                        check_result(r, meta["checks"], columns, rows)
 
         rel = d.relative_to(ROOT)
         status = "FAIL" if r.errors else "PASS"

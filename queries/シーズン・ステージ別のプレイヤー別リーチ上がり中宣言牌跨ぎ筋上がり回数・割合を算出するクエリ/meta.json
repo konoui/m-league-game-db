@@ -22,5 +22,21 @@
     "player",
     "player_team",
     "team"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "シーズン",
+      "ステージ",
+      "プレイヤー名"
+    ],
+    "rules": [
+      "シーズン GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'",
+      "ステージ IN ('regular', 'semifinal', 'final')",
+      "プレイヤー名 IS NOT NULL",
+      "チーム名 IS NOT NULL",
+      "リーチ上がり数 >= 1",
+      "跨ぎ筋上がり数 BETWEEN 0 AND リーチ上がり数",
+      "跨ぎ筋上がり割合 BETWEEN 0 AND 100"
+    ]
+  }
 }

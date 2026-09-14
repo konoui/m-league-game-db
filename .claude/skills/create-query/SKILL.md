@@ -11,7 +11,7 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 
 - `references/query-format.md`: ファイル形式・命名・品質基準。**作成前に必ず読む**
 - `references/analysis-perspectives.md`: 指標の定義と分析観点
-- `TABLE.md`: テーブル定義。スキーマは `sqlite3 database.sqlite3 ".schema <table>"` でも確認できる
+- `TABLE.md`: テーブル定義。スキーマは `sqlite3 -readonly database.sqlite3 ".schema <table>"` でも確認できる
 - `PAI_FORMAT.md`（牌の表し方）、`YAKU_NAMES.md`（役名）、`MLEAGUE.md`（M リーグの情報。あれば読む）
 - 既存の `queries/*/`: 同じ結合・集計パターンを探す手本
 
@@ -46,8 +46,9 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 1. `description` を `references/query-format.md` の命名規則に従って決める
 2. `queries/<description>/query.sql` を書く
 3. `queries/<description>/meta.json` を書く。`tables` は空配列のままにせず、分かる範囲で書いておく
+4. `checks` を書く。手順 3 で決めた指標の定義から、結果が必ず満たす性質（粒度、値域、包含関係、合計の整合）を洗い出す。結果を見てから合わせにいくのではなく、SQL を実行する前に書く
 
-ファイルを保存するたびに PostToolUse hook が `scripts/validate.py` を実行する。エラーが返ってきたら修正する。`query.sql` を書いた直後は `meta.json` がまだないためエラーになるが、これは想定どおり。
+`meta.json` があるクエリのファイルを保存するたびに、PostToolUse hook が `scripts/validate.py` を実行する。エラーが返ってきたら修正する。作業を終えるときは Stop hook が、変更したクエリの検証と `query-examples/` の生成漏れを確認する。
 
 ### 5. 検証する
 
@@ -57,11 +58,12 @@ uv run scripts/validate.py --fix queries/<description>
 
 - `--fix` は `tables` を実際の参照テーブルに合わせて書き換える
 - PASS するまで修正を繰り返す
+- `checks` の違反は、まず SQL の誤りを疑う。ルールを緩めるのは、ルール自体がドメイン上誤っていると説明できる場合だけにする
 
-validate は形式と実行可否しか見ない。**結果が正しいかは自分で確かめる**:
+`checks` で検出できるのは、書いた性質が破れる誤りだけ。**結果が正しいかは自分でも確かめる**:
 
 ```bash
-sqlite3 -header -column database.sqlite3 < "queries/<description>/query.sql" | head -30
+sqlite3 -readonly -header -column database.sqlite3 < "queries/<description>/query.sql" | head -30
 ```
 
 - 件数・値の範囲が常識的か（例: 率が 0〜100 に収まる、試合数がシーズンの総試合数を超えない）

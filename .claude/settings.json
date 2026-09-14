@@ -3,7 +3,7 @@
     "allow": [
       "Bash(uv run scripts/validate.py:*)",
       "Bash(uv run scripts/render.py:*)",
-      "Bash(sqlite3 database.sqlite3:*)",
+      "Bash(sqlite3 -readonly:*)",
       "Bash(gh issue view:*)"
     ]
   },
@@ -14,7 +14,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-query.py\""
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-query.py\"",
+            "timeout": 180
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-on-stop.py\"",
+            "timeout": 600
           }
         ]
       }

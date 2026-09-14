@@ -16,5 +16,21 @@
     "player",
     "player_team",
     "team"
-  ]
+  ],
+  "checks": {
+    "unique": [
+      "シーズン",
+      "ステージ",
+      "プレイヤー名"
+    ],
+    "rules": [
+      "シーズン GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'",
+      "ステージ IN ('regular', 'semifinal', 'final')",
+      "プレイヤー名 IS NOT NULL",
+      "チーム名 IS NOT NULL",
+      "リーチ回数 >= 1",
+      "リーチ後放銃回数 BETWEEN 0 AND リーチ回数",
+      "リーチ後放銃率 BETWEEN 0 AND 100"
+    ]
+  }
 }
