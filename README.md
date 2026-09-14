@@ -26,7 +26,7 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 [こちらを参照ください。](./query-examples/README.md)
 
-## 新しいクエリ
+### Claude Code で新しいクエリを作成する
 
 [Claude Code](https://claude.com/claude-code) の skill を使って、クエリ例を作成できます。
 
