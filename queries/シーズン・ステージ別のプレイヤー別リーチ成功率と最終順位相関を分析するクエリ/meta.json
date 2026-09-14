@@ -1,0 +1,23 @@
+{
+  "description": "シーズン・ステージ別のプレイヤー別リーチ成功率と最終順位相関を分析するクエリ",
+  "plan": [
+    "シーズン・ステージごとのプレイヤー別リーチ成功率を算出する",
+    "同期間の各プレイヤーの平均順位と順位分布を集計する",
+    "リーチ成功率を効率性カテゴリ（High/Medium/Low）に分類する",
+    "平均順位を成績カテゴリ（Strong/Average/Weak）に分類する",
+    "一定回数以上のリーチを行ったプレイヤーのみを対象とする",
+    "リーチ成功率の高い順に結果を並べて相関関係を分析可能にする"
+  ],
+  "tables": [
+    "league_season",
+    "season_stage",
+    "game",
+    "kyoku",
+    "event",
+    "reach_event",
+    "player",
+    "player_team",
+    "team",
+    "game_player_result"
+  ]
+}

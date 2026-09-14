@@ -1,0 +1,82 @@
+-- シーズン・ステージ別のプレイヤー別リーチ統計を集計する
+WITH reach_stats AS (
+  SELECT 
+    ls.start_year,
+    ss.stage,
+    p.name as player_name,
+    t.name as team_name,
+    -- リーチ成功・失敗の集計
+    COUNT(CASE WHEN re.is_accepted = true THEN 1 END) as successful_reach_count,
+    COUNT(re.event_id) as total_reach_count,
+    CASE 
+      WHEN COUNT(re.event_id) > 0 
+      THEN ROUND(COUNT(CASE WHEN re.is_accepted = true THEN 1 END) * 100.0 / COUNT(re.event_id), 2)
+      ELSE 0 
+    END as reach_success_rate
+  FROM league_season ls
+  -- シーズン・ステージ・試合・局・イベント情報の結合
+  JOIN season_stage ss ON ls.id = ss.league_season_id
+  JOIN game g ON ss.id = g.season_stage_id
+  JOIN kyoku k ON g.id = k.game_id
+  JOIN event e ON k.id = e.kyoku_id
+  JOIN reach_event re ON e.id = re.event_id
+  -- プレイヤー・チーム情報の結合
+  JOIN player p ON re.actor_player_id = p.id
+  JOIN player_team pt ON p.id = pt.player_id 
+    AND ls.start_year >= pt.joined_season_year 
+    AND ls.start_year <= pt.left_season_year
+  JOIN team t ON pt.team_id = t.id
+  GROUP BY ls.start_year, ss.stage, p.id, p.name, t.name
+),
+-- シーズン・ステージ別のプレイヤー別順位統計を集計する
+rank_stats AS (
+  SELECT 
+    ls.start_year,
+    ss.stage,
+    p.name as player_name,
+    -- 順位統計の算出
+    AVG(gpr.rank) as avg_rank,
+    COUNT(CASE WHEN gpr.rank = 1 THEN 1 END) as rank1_count,
+    COUNT(CASE WHEN gpr.rank <= 2 THEN 1 END) as top2_count,
+    COUNT(gpr.game_id) as total_games,
+    ROUND(COUNT(CASE WHEN gpr.rank = 1 THEN 1 END) * 100.0 / COUNT(gpr.game_id), 2) as top_rate,
+    ROUND(COUNT(CASE WHEN gpr.rank <= 2 THEN 1 END) * 100.0 / COUNT(gpr.game_id), 2) as top2_rate
+  FROM league_season ls
+  -- シーズン・ステージ・試合情報の結合
+  JOIN season_stage ss ON ls.id = ss.league_season_id
+  JOIN game g ON ss.id = g.season_stage_id
+  JOIN game_player_result gpr ON g.id = gpr.game_id
+  JOIN player p ON gpr.player_id = p.id
+  GROUP BY ls.start_year, ss.stage, p.id, p.name
+)
+-- 最終結果: リーチ成功率と順位統計の相関分析データを出力
+SELECT 
+  rs.start_year,
+  rs.stage,
+  rs.player_name,
+  rs.team_name,
+  rs.total_reach_count,
+  rs.successful_reach_count,
+  rs.reach_success_rate,
+  rks.total_games,
+  ROUND(rks.avg_rank, 2) as avg_rank,
+  rks.top_rate,
+  rks.top2_rate,
+  -- リーチ効率性カテゴリの分類
+  CASE 
+    WHEN rs.reach_success_rate >= 85 THEN 'High'
+    WHEN rs.reach_success_rate >= 70 THEN 'Medium' 
+    ELSE 'Low'
+  END as reach_efficiency_category,
+  -- 成績カテゴリの分類
+  CASE 
+    WHEN rks.avg_rank <= 2.0 THEN 'Strong'
+    WHEN rks.avg_rank <= 2.5 THEN 'Average'
+    ELSE 'Weak'
+  END as performance_category
+FROM reach_stats rs
+JOIN rank_stats rks ON rs.start_year = rks.start_year 
+  AND rs.stage = rks.stage 
+  AND rs.player_name = rks.player_name
+WHERE rs.total_reach_count >= 10
+ORDER BY rs.start_year, rs.stage, rs.reach_success_rate DESC;

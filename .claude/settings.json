@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run scripts/validate.py:*)",
+      "Bash(uv run scripts/render.py:*)",
+      "Bash(sqlite3 database.sqlite3:*)",
+      "Bash(gh issue view:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-query.py\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+-- 各チームの試合ごとの連対状況を取得
+WITH team_games AS (
+    SELECT 
+        ls.start_year AS season_year,
+        ss.stage,
+        t.name AS team_name,
+        g.date,
+        g.match_number,
+        -- チームの最高順位を取得
+        MIN(gpr.rank) AS team_best_rank,
+        CASE WHEN MIN(gpr.rank) <= 2 THEN 1 ELSE 0 END AS is_rentai,
+        ROW_NUMBER() OVER (PARTITION BY t.id, ls.start_year, ss.stage ORDER BY g.date, g.match_number) AS game_sequence
+    FROM game_player_result gpr
+    -- プレイヤー情報の結合
+    JOIN player p ON gpr.player_id = p.id
+    -- 試合・シーズン情報の結合
+    JOIN game g ON gpr.game_id = g.id
+    JOIN season_stage ss ON g.season_stage_id = ss.id
+    JOIN league_season ls ON ss.league_season_id = ls.id
+    -- チーム所属情報の結合
+    JOIN player_team pt ON p.id = pt.player_id 
+        AND ls.start_year >= pt.joined_season_year 
+        AND ls.start_year <= pt.left_season_year
+    JOIN team t ON pt.team_id = t.id
+    GROUP BY ls.start_year, ss.stage, t.id, t.name, g.id, g.date, g.match_number
+),
+-- 連続記録のグループ化
+streak_groups AS (
+    SELECT 
+        season_year,
+        stage,
+        team_name,
+        date,
+        team_best_rank,
+        is_rentai,
+        game_sequence,
+        -- 連続記録のグループを識別
+        game_sequence - ROW_NUMBER() OVER (PARTITION BY team_name, season_year, stage, is_rentai ORDER BY game_sequence) AS streak_group
+    FROM team_games
+),
+-- 連続連対記録の集計
+consecutive_streaks AS (
+    SELECT 
+        season_year,
+        stage,
+        team_name,
+        streak_group,
+        COUNT(*) AS streak_length,
+        MIN(date) AS streak_start_date,
+        MAX(date) AS streak_end_date
+    FROM streak_groups
+    WHERE is_rentai = 1
+    GROUP BY season_year, stage, team_name, streak_group
+)
+-- 最終結果: 連続連対記録を出力
+SELECT 
+    season_year AS シーズン年,
+    stage AS ステージ,
+    team_name AS チーム名,
+    streak_length AS 連続連対回数,
+    streak_start_date AS 記録開始日,
+    streak_end_date AS 記録終了日
+FROM consecutive_streaks
+ORDER BY streak_length DESC, season_year DESC, stage, team_name
+LIMIT 10;

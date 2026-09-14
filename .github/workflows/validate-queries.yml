@@ -3,6 +3,7 @@ name: Validate SQL Queries
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -11,6 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Check query-examples are up to date
+        run: uv run scripts/render.py --check
+
       - name: Download latest database
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -18,5 +24,5 @@ jobs:
           gh release download --pattern 'database.zip'
           unzip database.zip
 
-      - name: Run query validation
-        run: ./scripts/query-helper.sh run-all database.sqlite3 query-examples
+      - name: Validate queries
+        run: uv run scripts/validate.py --db database.sqlite3

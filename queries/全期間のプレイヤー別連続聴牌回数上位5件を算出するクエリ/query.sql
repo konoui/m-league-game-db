@@ -1,0 +1,80 @@
+-- 聴牌データとプレイヤー・試合情報を結合する
+-- is_tenpai=1 の行（7,450件）から出発し、全局をスキャンする game_kyoku_order CTE を廃止
+-- kyoku_order は idx_kyoku_game_round_honba を使った相関サブクエリで計算する
+WITH player_tenpai AS (
+    SELECT
+        rpe.player_id,
+        k.game_id,
+        (
+            SELECT COUNT(*)
+            FROM kyoku k2
+            WHERE k2.game_id = k.game_id
+              AND (k2.round < k.round OR (k2.round = k.round AND k2.honba_count <= k.honba_count))
+        ) AS kyoku_order,
+        p.name AS player_name,
+        t.name AS team_name,
+        ls.start_year AS season_year,
+        ss.stage,
+        g.date
+    FROM ryukyoku_player_event rpe
+    -- 流局イベントとの結合
+    JOIN ryukyoku_event re ON rpe.ryukyoku_event_id = re.event_id
+    JOIN event e ON re.event_id = e.id
+    JOIN kyoku k ON e.kyoku_id = k.id
+    -- プレイヤー情報の結合
+    JOIN player p ON rpe.player_id = p.id
+    -- 試合・シーズン情報の結合
+    JOIN game g ON k.game_id = g.id
+    JOIN season_stage ss ON g.season_stage_id = ss.id
+    JOIN league_season ls ON ss.league_season_id = ls.id
+    -- チーム所属情報の結合
+    JOIN player_team pt ON p.id = pt.player_id
+        AND ls.start_year >= pt.joined_season_year
+        AND ls.start_year <= pt.left_season_year
+    JOIN team t ON pt.team_id = t.id
+    WHERE rpe.is_tenpai = 1
+),
+-- 連続聴牌のグループを特定する
+streak_groups AS (
+    SELECT 
+        player_id,
+        game_id,
+        player_name,
+        team_name,
+        season_year,
+        stage,
+        date,
+        kyoku_order,
+        kyoku_order - ROW_NUMBER() OVER (PARTITION BY player_id, game_id ORDER BY kyoku_order) AS streak_group
+    FROM player_tenpai
+),
+-- 連続聴牌回数を集計する
+consecutive_tenpai AS (
+    SELECT 
+        player_id,
+        game_id,
+        player_name,
+        team_name,
+        season_year,
+        stage,
+        date,
+        COUNT(*) AS consecutive_tenpai_count,
+        MIN(kyoku_order) AS streak_start_kyoku,
+        MAX(kyoku_order) AS streak_end_kyoku
+    FROM streak_groups
+    GROUP BY player_id, game_id, player_name, team_name, season_year, stage, date, streak_group
+    HAVING COUNT(*) >= 2
+)
+-- 最終結果: 連続聴牌回数上位5件を出力
+SELECT 
+    season_year AS シーズン年,
+    stage AS ステージ,
+    date AS 試合日,
+    player_name AS プレイヤー名,
+    team_name AS チーム名,
+    consecutive_tenpai_count AS 連続聴牌回数,
+    streak_start_kyoku AS 記録開始局順,
+    streak_end_kyoku AS 記録終了局順
+FROM consecutive_tenpai
+ORDER BY consecutive_tenpai_count DESC, season_year DESC, date DESC
+LIMIT 5;
