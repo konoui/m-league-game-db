@@ -317,26 +317,32 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id, target_player_id -> player.id
 
-| カラム名         | データ型 | NULL 許可 | 説明                    |
-| ---------------- | -------- | --------- | ----------------------- |
-| event_id         | integer  | NO        | イベント ID             |
-| actor_player_id  | integer  | NO        | チーしたプレイヤー ID   |
-| target_player_id | integer  | NO        | 牌を捨てたプレイヤー ID |
-| tile             | varchar  | NO        | チーした牌              |
-| block            | varchar  | NO        | 鳴いた後の牌のブロック  |
+| カラム名             | データ型 | NULL 許可 | 説明                                                                                                                                                         |
+| -------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| event_id             | integer  | NO        | イベント ID                                                                                                                                                  |
+| actor_player_id      | integer  | NO        | チーしたプレイヤー ID                                                                                                                                        |
+| target_player_id     | integer  | NO        | 牌を捨てたプレイヤー ID                                                                                                                                      |
+| tile                 | varchar  | NO        | チーした牌                                                                                                                                                   |
+| block                | varchar  | NO        | 鳴いた後の牌のブロック                                                                                                                                       |
+| furo_count           | integer  | NO        | この鳴きの後の副露数（1 副露目なら 1。暗槓は含めない）                                                                                                       |
+| before_shanten_count | integer  | NO        | 鳴く直前（13 枚）の一般形シャンテン数。鳴いた後は七対子・国士が成立しないため一般形で数える                                                                  |
+| after_shanten_count  | integer  | NO        | 面子を晒した直後、打牌より前の一般形シャンテン数。14 枚相当なので最善の打牌をした場合の値になり、実際の打牌後の値以下になる。聴牌から和了牌を鳴いた場合は -1 |
 
 #### pon_event（ポンイベント）
 
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id, target_player_id -> player.id
 
-| カラム名         | データ型 | NULL 許可 | 説明                    |
-| ---------------- | -------- | --------- | ----------------------- |
-| event_id         | integer  | NO        | イベント ID             |
-| actor_player_id  | integer  | NO        | ポンしたプレイヤー ID   |
-| target_player_id | integer  | NO        | 牌を捨てたプレイヤー ID |
-| block            | varchar  | NO        | 鳴いた後の牌のブロック  |
-| tile             | varchar  | NO        | ポンした牌              |
+| カラム名             | データ型 | NULL 許可 | 説明                                                                                                                                                         |
+| -------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| event_id             | integer  | NO        | イベント ID                                                                                                                                                  |
+| actor_player_id      | integer  | NO        | ポンしたプレイヤー ID                                                                                                                                        |
+| target_player_id     | integer  | NO        | 牌を捨てたプレイヤー ID                                                                                                                                      |
+| block                | varchar  | NO        | 鳴いた後の牌のブロック                                                                                                                                       |
+| tile                 | varchar  | NO        | ポンした牌                                                                                                                                                   |
+| furo_count           | integer  | NO        | この鳴きの後の副露数（1 副露目なら 1。暗槓は含めない）                                                                                                       |
+| before_shanten_count | integer  | NO        | 鳴く直前（13 枚）の一般形シャンテン数。鳴いた後は七対子・国士が成立しないため一般形で数える                                                                  |
+| after_shanten_count  | integer  | NO        | 面子を晒した直後、打牌より前の一般形シャンテン数。14 枚相当なので最善の打牌をした場合の値になり、実際の打牌後の値以下になる。聴牌から和了牌を鳴いた場合は -1 |
 
 #### ankan_event（暗槓イベント）
 
@@ -354,13 +360,16 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
 
-| カラム名         | データ型 | NULL 許可 | 説明                    |
-| ---------------- | -------- | --------- | ----------------------- |
-| event_id         | integer  | NO        | イベント ID             |
-| actor_player_id  | integer  | NO        | カンしたプレイヤー ID   |
-| target_player_id | integer  | NO        | 牌を捨てたプレイヤー ID |
-| tile             | varchar  | NO        | カンをした牌            |
-| block            | varchar  | NO        | 鳴いた後の牌のブロック  |
+| カラム名             | データ型 | NULL 許可 | 説明                                                                                        |
+| -------------------- | -------- | --------- | ------------------------------------------------------------------------------------------- |
+| event_id             | integer  | NO        | イベント ID                                                                                 |
+| actor_player_id      | integer  | NO        | カンしたプレイヤー ID                                                                       |
+| target_player_id     | integer  | NO        | 牌を捨てたプレイヤー ID                                                                     |
+| tile                 | varchar  | NO        | カンをした牌                                                                                |
+| block                | varchar  | NO        | 鳴いた後の牌のブロック                                                                      |
+| furo_count           | integer  | NO        | この鳴きの後の副露数（1 副露目なら 1。暗槓は含めない）                                      |
+| before_shanten_count | integer  | NO        | 鳴く直前（13 枚）の一般形シャンテン数。鳴いた後は七対子・国士が成立しないため一般形で数える |
+| after_shanten_count  | integer  | NO        | 面子を晒した直後、嶺上ツモより前の一般形シャンテン数                                        |
 
 #### shominkan_event（小明槓・カカンイベント）
 
@@ -399,21 +408,22 @@
 **複合主キー**: event_id, player_id
 **外部キー**: event_id -> event.id, player_id -> player.id
 
-| カラム名                       | データ型 | NULL 許可 | 説明                                                                       |
-| ------------------------------ | -------- | --------- | -------------------------------------------------------------------------- |
-| event_id                       | integer  | NO        | イベント ID                                                                |
-| player_id                      | integer  | NO        | プレイヤー ID                                                              |
-| hand                           | varchar  | NO        | 手牌                                                                       |
-| called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック（,区切り）                                        |
-| shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）         |
-| standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                       |
-| seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                         |
-| thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                       |
-| is_reached                     | boolean  | NO        | リーチ状態か                                                               |
-| is_furiten                     | boolean  | NO        | フリテン状態か                                                             |
-| turn_number                    | integer  | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報 |
-| call_count                     | integer  | NO        | 鳴いた回数、ただし暗槓を含む                                               |
-| is_menzen                      | boolean  | NO        | 面前か                                                                     |
+| カラム名                       | データ型 | NULL 許可 | 説明                                                                                                                                         |
+| ------------------------------ | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| event_id                       | integer  | NO        | イベント ID                                                                                                                                  |
+| player_id                      | integer  | NO        | プレイヤー ID                                                                                                                                |
+| hand                           | varchar  | NO        | 手牌                                                                                                                                         |
+| called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック（,区切り）                                                                                                          |
+| shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）                                                                           |
+| standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                                                                                         |
+| seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                                                                                           |
+| thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                                                                                         |
+| is_reached                     | boolean  | NO        | リーチ状態か                                                                                                                                 |
+| is_furiten                     | boolean  | NO        | フリテン状態か                                                                                                                               |
+| turn_number                    | integer  | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報                                                                   |
+| call_count                     | integer  | NO        | 鳴いた回数、ただし暗槓を含む                                                                                                                 |
+| furo_count                     | integer  | NO        | 副露数。チー・ポン・大明槓で晒した面子の数で、暗槓は含めず加槓は元のポンのまま数える（集計ビューの furo_count は副露した局数で単位が異なる） |
+| is_menzen                      | boolean  | NO        | 面前か                                                                                                                                       |
 
 ### player_tenpai_state（聴牌時のプレイヤーの状態）
 
