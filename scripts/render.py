@@ -42,8 +42,13 @@ def render_readme(names: list[str]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def is_planning(d: Path) -> bool:
+    return not (d / "meta.json").exists() and not (d / "query.sql").exists()
+
+
 def build() -> dict[str, str]:
-    dirs = sorted(p for p in QUERIES_DIR.iterdir() if p.is_dir())
+    # PLAN.md だけのディレクトリは計画段階のため対象外（未完成のまま残っていれば validate.py が検出する）
+    dirs = sorted(p for p in QUERIES_DIR.iterdir() if p.is_dir() and not is_planning(p))
     incomplete = [d for d in dirs if not ((d / "meta.json").is_file() and (d / "query.sql").is_file())]
     if incomplete:
         names = "\n".join(f"  queries/{d.name}" for d in incomplete)

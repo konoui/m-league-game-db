@@ -6,12 +6,13 @@
 
 ```
 queries/<description>/
+  PLAN.md     # 作成時の計画と検証の記録（公開用 Markdown には含めない）
   query.sql   # SQL 本体
-  meta.json   # description, plan, tables（schema/meta.schema.json）
+  meta.json   # description, plan, tables, checks（schema/meta.schema.json）
 ```
 
 - ディレクトリ名は `description` と完全に一致させる (validate)
-- 置けるファイルは `query.sql` と `meta.json` の 2 つだけ (validate)
+- 置けるファイルは `query.sql`、`meta.json`（必須）と `PLAN.md`（任意）だけ (validate)
 - `query-examples/*.md` は `uv run scripts/render.py` で生成するため、手で編集しない (CI)
 
 ## meta.json

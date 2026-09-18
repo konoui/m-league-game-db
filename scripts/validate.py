@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 QUERIES_DIR = ROOT / "queries"
 SCHEMA_FILE = ROOT / "schema" / "meta.schema.json"
 QUERY_FILES = {"query.sql", "meta.json"}
+OPTIONAL_FILES = {"PLAN.md"}
 
 DESCRIPTION_RE = re.compile(
     r"^(?P<unit>シーズン・ステージ別の|シーズン別の|ステージ別の|暦年別の|全期間の)"
@@ -59,8 +60,8 @@ def check_files(r: Result, d: Path) -> bool:
     names = {p.name for p in d.iterdir()}
     for missing in sorted(QUERY_FILES - names):
         r.error(f"{missing} がありません")
-    for extra in sorted(names - QUERY_FILES):
-        r.error(f"想定外のファイルです: {extra}（query.sql と meta.json のみ置けます）")
+    for extra in sorted(names - QUERY_FILES - OPTIONAL_FILES):
+        r.error(f"想定外のファイルです: {extra}（query.sql, meta.json, PLAN.md のみ置けます）")
     return QUERY_FILES <= names
 
 
