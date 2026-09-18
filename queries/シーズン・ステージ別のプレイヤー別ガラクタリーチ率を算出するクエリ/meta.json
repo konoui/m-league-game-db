@@ -15,7 +15,6 @@
     "event",
     "player_tenpai_state",
     "tenpai_agari_matrix",
-    "tenpai_yaku_event",
     "yaku_name",
     "kyoku",
     "kyoku_player_result",
@@ -24,7 +23,8 @@
     "league_season",
     "player",
     "player_team",
-    "team"
+    "team",
+    "tenpai_yaku"
   ],
   "checks": {
     "unique": [

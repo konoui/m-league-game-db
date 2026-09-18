@@ -11,7 +11,6 @@
     "ステージは区別せずシーズン単位で集計する"
   ],
   "tables": [
-    "tenpai_yaku_event",
     "tenpai_agari_matrix",
     "yaku_name",
     "discard_event",
@@ -25,7 +24,8 @@
     "league_season",
     "player",
     "player_team",
-    "team"
+    "team",
+    "tenpai_yaku"
   ],
   "checks": {
     "unique": [

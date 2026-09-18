@@ -16,7 +16,7 @@ game_reach_counts AS (
         ls.start_year,
         ss.stage,
         g.date,
-        g.match_number,
+        g.day_game_number,
         -- リーチ回数の集計
         COUNT(re.event_id) AS reach_count,
         COUNT(DISTINCT k.id) AS kyoku_count
@@ -28,14 +28,14 @@ game_reach_counts AS (
     JOIN kyoku k ON g.id = k.game_id
     LEFT JOIN event e ON k.id = e.kyoku_id AND e.type = 'reach'
     LEFT JOIN reach_event re ON e.id = re.event_id
-    GROUP BY g.id, ls.start_year, ss.stage, g.date, g.match_number
+    GROUP BY g.id, ls.start_year, ss.stage, g.date, g.day_game_number
 )
 -- 最終結果: 試合別リーチ回数上位10件を出力
 SELECT 
     grc.start_year AS シーズン年,
     grc.stage AS ステージ,
     grc.date AS 試合日,
-    grc.match_number AS 試合番号,
+    grc.day_game_number AS 試合番号,
     -- プレイヤー名の展開
     MAX(CASE WHEN gp.player_order = 1 THEN gp.player_name END) AS プレイヤー1,
     MAX(CASE WHEN gp.player_order = 2 THEN gp.player_name END) AS プレイヤー2,
@@ -45,6 +45,6 @@ SELECT
     grc.kyoku_count AS 総局数
 FROM game_reach_counts grc
 JOIN game_players gp ON grc.game_id = gp.game_id
-GROUP BY grc.game_id, grc.start_year, grc.stage, grc.date, grc.match_number, grc.reach_count
+GROUP BY grc.game_id, grc.start_year, grc.stage, grc.date, grc.day_game_number, grc.reach_count
 ORDER BY リーチ回数合計 DESC, シーズン年 DESC, ステージ, 試合日 DESC
 LIMIT 10;

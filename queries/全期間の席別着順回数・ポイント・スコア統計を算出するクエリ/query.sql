@@ -20,7 +20,7 @@ seat_stats AS (
         SUM(CASE WHEN gpr.rank = 3 THEN 1 ELSE 0 END) AS rank3_count,
         SUM(CASE WHEN gpr.rank = 4 THEN 1 ELSE 0 END) AS rank4_count,
         -- ポイント・スコアの合計
-        SUM(gpr.points) AS total_points,
+        SUM(gpr.league_points) AS total_points,
         SUM(gpr.score) AS total_score
     FROM game_seat gs
     -- 試合結果の結合

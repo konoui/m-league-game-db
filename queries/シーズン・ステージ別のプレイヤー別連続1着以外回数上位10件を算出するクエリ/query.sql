@@ -7,11 +7,11 @@ WITH player_games AS (
         ls.start_year AS season_year,
         ss.stage,
         g.date,
-        g.match_number,
+        g.day_game_number,
         gpr.rank,
         -- 1着以外フラグの設定
         CASE WHEN gpr.rank != 1 THEN 1 ELSE 0 END AS is_not_first,
-        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.match_number) AS game_sequence
+        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.day_game_number) AS game_sequence
     FROM game_player_result gpr
     -- プレイヤー情報の結合
     JOIN player p ON gpr.player_id = p.id

@@ -16,7 +16,7 @@ WITH player_tenpai AS (
         ls.start_year AS season_year,
         ss.stage,
         g.date
-    FROM ryukyoku_player_event rpe
+    FROM ryukyoku_player rpe
     -- 流局イベントとの結合
     JOIN ryukyoku_event re ON rpe.ryukyoku_event_id = re.event_id
     JOIN event e ON re.event_id = e.id

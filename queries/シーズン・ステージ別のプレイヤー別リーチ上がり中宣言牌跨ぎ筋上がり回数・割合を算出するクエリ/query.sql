@@ -19,7 +19,7 @@ reach_agari AS (
     SELECT
         rwd.*,
         -- 上がり牌の赤ドラ正規化
-        CASE ae.winning_tile WHEN '0m' THEN '5m' WHEN '0p' THEN '5p' WHEN '0s' THEN '5s' ELSE ae.winning_tile END AS norm_win
+        CASE ae.agari_tile WHEN '0m' THEN '5m' WHEN '0p' THEN '5p' WHEN '0s' THEN '5s' ELSE ae.agari_tile END AS norm_win
     FROM reach_with_decl rwd
     -- 同局で同プレイヤーがあがったイベントを結合
     JOIN agari_event ae ON ae.actor_player_id = rwd.actor_player_id

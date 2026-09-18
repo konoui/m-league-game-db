@@ -2,7 +2,7 @@
 WITH yakuman_in_game AS (
     SELECT
         k.game_id,
-        GROUP_CONCAT(p.name || '(' || ae.description || '・' || ae.points || '点)', '、') AS yakuman_detail
+        GROUP_CONCAT(p.name || '(' || ae.description || '・' || ae.revenue_points || '点)', '、') AS yakuman_detail
     FROM agari_event ae
     JOIN event e ON ae.event_id = e.id
     JOIN kyoku k ON e.kyoku_id = k.id
@@ -15,7 +15,7 @@ WITH yakuman_in_game AS (
 sanbaiman_in_game AS (
     SELECT
         k.game_id,
-        GROUP_CONCAT(p.name || '(' || ae.han || '翻・' || ae.points || '点)', '、') AS sanbaiman_detail
+        GROUP_CONCAT(p.name || '(' || ae.han || '翻・' || ae.revenue_points || '点)', '、') AS sanbaiman_detail
     FROM agari_event ae
     JOIN event e ON ae.event_id = e.id
     JOIN kyoku k ON e.kyoku_id = k.id
@@ -29,7 +29,7 @@ SELECT
     ls.start_year || '-' || (ls.start_year + 1) AS シーズン,
     ss.stage AS ステージ,
     g.date AS 試合日,
-    g.round_number AS ラウンド番号,
+    g.stage_game_number AS ラウンド番号,
     y.yakuman_detail AS 役満,
     s.sanbaiman_detail AS 三倍満
 FROM yakuman_in_game y

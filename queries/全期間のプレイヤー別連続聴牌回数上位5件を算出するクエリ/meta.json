@@ -9,7 +9,6 @@
   ],
   "tables": [
     "kyoku",
-    "ryukyoku_player_event",
     "ryukyoku_event",
     "event",
     "player",
@@ -17,7 +16,8 @@
     "season_stage",
     "league_season",
     "player_team",
-    "team"
+    "team",
+    "ryukyoku_player"
   ],
   "checks": {
     "unique": [

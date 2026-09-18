@@ -13,8 +13,8 @@
      -- イベント・和了情報の結合
      JOIN event e ON k.id = e.kyoku_id
      JOIN agari_event ae ON e.id = ae.event_id
-     JOIN agari_yaku_event ye ON ae.event_id = ye.agari_event_id
-     JOIN yaku_name yn ON ye.name_id = yn.id
+     JOIN agari_yaku ye ON ae.event_id = ye.agari_event_id
+     JOIN yaku_name yn ON ye.yaku_name_id = yn.id
      -- プレイヤー・チーム情報の結合
      JOIN player p ON ae.actor_player_id = p.id
      JOIN player_team pt ON p.id = pt.player_id AND ls.start_year >= pt.joined_season_year AND ls.start_year <= pt.left_season_year

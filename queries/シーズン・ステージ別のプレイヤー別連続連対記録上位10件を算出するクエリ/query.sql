@@ -9,7 +9,7 @@ WITH player_games AS (
         gpr.rank,
         -- 連対判定（1着または2着）
         CASE WHEN gpr.rank <= 2 THEN 1 ELSE 0 END AS is_rentai,
-        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.match_number) AS game_sequence
+        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.day_game_number) AS game_sequence
     FROM game_player_result gpr
     -- プレイヤー情報の結合
     JOIN player p ON gpr.player_id = p.id

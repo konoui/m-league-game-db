@@ -14,11 +14,11 @@
     "league_season",
     "event",
     "agari_event",
-    "agari_yaku_event",
     "yaku_name",
     "player",
     "player_team",
-    "team"
+    "team",
+    "agari_yaku"
   ],
   "checks": {
     "unique": [

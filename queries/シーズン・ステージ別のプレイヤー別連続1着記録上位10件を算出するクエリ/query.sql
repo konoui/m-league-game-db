@@ -9,7 +9,7 @@ WITH player_games AS (
         gpr.rank,
         -- 1着判定フラグ
         CASE WHEN gpr.rank = 1 THEN 1 ELSE 0 END AS is_first,
-        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.match_number) AS game_sequence
+        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.day_game_number) AS game_sequence
     FROM game_player_result gpr
     -- プレイヤー・試合・シーズン情報の結合
     JOIN player p ON gpr.player_id = p.id

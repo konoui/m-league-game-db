@@ -1,17 +1,17 @@
 -- ダブル立直かつ両面・複合形待ちのリーチ宣言打牌イベントをユニークに特定する
 WITH double_reach_tenpai AS (
     SELECT DISTINCT
-        tam.tenpai_event_id,
+        tam.event_id,
         de.actor_player_id
-    FROM tenpai_yaku_event tye
+    FROM tenpai_yaku tye
     JOIN tenpai_agari_matrix tam ON tye.tenpai_agari_matrix_id = tam.id
     -- 役名の確認
-    JOIN yaku_name yn ON tye.name_id = yn.id
+    JOIN yaku_name yn ON tye.yaku_name_id = yn.id
     -- リーチ宣言打牌からプレイヤー ID を取得（リーチ宣言打牌のみに絞る）
-    JOIN discard_event de ON de.event_id = tam.tenpai_event_id AND de.is_reach_declaration = 1
+    JOIN discard_event de ON de.event_id = tam.event_id AND de.is_reach_declaration = 1
     -- 待ちタイプの確認
     JOIN player_tenpai_state pts
-        ON pts.event_id = tam.tenpai_event_id AND pts.player_id = de.actor_player_id
+        ON pts.event_id = tam.event_id AND pts.player_id = de.actor_player_id
     WHERE yn.name = 'ダブル立直'
       AND pts.waiting_type IN ('両面', '複合形')
 ),
@@ -28,7 +28,7 @@ double_reach_ryukyoku AS (
         e.kyoku_id
     FROM double_reach_tenpai drt
     -- 局 ID の取得
-    JOIN event e ON e.id = drt.tenpai_event_id
+    JOIN event e ON e.id = drt.event_id
     -- 流局した局との突き合わせ
     JOIN ryukyoku_kyoku rk ON rk.kyoku_id = e.kyoku_id
 )

@@ -8,16 +8,16 @@ WITH tsumo_per_kyoku AS (
 ),
 -- 流局ノーテン: ノーテン選手×局を事前計算
 -- idx_ryukyoku_player_tenpai (player_id, is_tenpai) で絞り込み
--- 内側 EXISTS は kyoku_player_result ではなく ryukyoku_player_event の行ごとに1回のみ実行
+-- 内側 EXISTS は kyoku_player_result ではなく ryukyoku_player の行ごとに1回のみ実行
 ryukyoku_noten_per_kyoku AS (
     SELECT e.kyoku_id, rpe.player_id
-    FROM ryukyoku_player_event rpe
+    FROM ryukyoku_player rpe
     JOIN ryukyoku_event re ON rpe.ryukyoku_event_id = re.event_id
     JOIN event e ON re.event_id = e.id
     WHERE rpe.is_tenpai = 0
       AND EXISTS (
           SELECT 1
-          FROM ryukyoku_player_event rpe2
+          FROM ryukyoku_player rpe2
           WHERE rpe2.ryukyoku_event_id = rpe.ryukyoku_event_id
             AND rpe2.player_id != rpe.player_id
             AND rpe2.is_tenpai = 1
@@ -100,7 +100,7 @@ SELECT
     ls.start_year || '-' || (ls.start_year + 1) AS シーズン,
     ss.stage AS ステージ,
     g.date AS 試合日,
-    g.round_number AS ラウンド番号,
+    g.stage_game_number AS ラウンド番号,
     p.name AS プレイヤー名,
     t.name AS チーム名,
     mc.max_consecutive_minus AS 最大連続マイナス数

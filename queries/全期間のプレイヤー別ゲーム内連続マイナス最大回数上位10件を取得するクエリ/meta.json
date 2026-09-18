@@ -14,14 +14,14 @@
     "agari_event",
     "event",
     "ryukyoku_event",
-    "ryukyoku_player_event",
     "reach_event",
     "player",
     "game",
     "season_stage",
     "league_season",
     "player_team",
-    "team"
+    "team",
+    "ryukyoku_player"
   ],
   "checks": {
     "unique": [
