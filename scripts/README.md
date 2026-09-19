@@ -35,13 +35,16 @@ uv run scripts/render.py
 
 ## make.sh
 
-外部リポジトリからデータベースファイル・ドキュメントをコピーし、テーブル定義と `query-examples/` を再生成する。
+ローカル作業用に、外部リポジトリから同期できないものだけを用意する。
 
-### make-table-doc.py
+- `database.sqlite3`: m-converter が作った DB をコピーする
+- `MLEAGUE.md`: 非公開のためワークフローでは配布できない
+- `query-examples/`: `render.py` で再生成する
 
-`m-converter` の `table-doc.yaml` からテーブル定義ドキュメント `TABLE.md` を目次込みで生成する。
-YAML が定義の正とし、表形式・目次のフォーマットはこのスクリプトが正。
-make.sh から呼ばれる。
+`TABLE.md` / `DB_CHANGELOG.md` / `DB_NAMING.md` / `YAKU_NAMES.md` / `PAI_FORMAT.md` は
+m-league-score-sheet の sync-db-docs ワークフローが main へ push するので、make.sh では扱わない。
+古い checkout から生成すると同期済みの内容を巻き戻してしまうため。
+ローカルで生成物を確認したいときは m-converter 側の `scripts/make-table-doc.py` を直接実行する。
 
 ## total-records.sh
 

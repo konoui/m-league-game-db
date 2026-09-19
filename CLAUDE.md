@@ -7,7 +7,7 @@ M リーグの試合情報 SQLite データベースの配布と、そのデー�
 - `queries/<description>/`: クエリ例の正。`query.sql`（SQL 本体）、`meta.json`（description, plan, tables, checks）、任意の `PLAN.md`（作成時の計画と検証の記録）
 - `schema/meta.schema.json`: `meta.json` の JSON Schema
 - `query-examples/`: `queries/` から生成する公開用 Markdown。**手で編集しない**
-- `TABLE.md`, `PAI_FORMAT.md`, `YAKU_NAMES.md`: `scripts/make.sh` で外部リポジトリからコピー・生成する。直接編集しない
+- `TABLE.md`, `DB_CHANGELOG.md`, `DB_NAMING.md`, `PAI_FORMAT.md`, `YAKU_NAMES.md`: m-league-score-sheet の sync-db-docs ワークフローが main へ push する。直接編集しない
 - `database.sqlite3`: `scripts/make.sh` でコピーするか、リリースからダウンロードする（git 管理外）
 
 ## クエリの作成・修正
