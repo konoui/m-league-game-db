@@ -1,0 +1,17 @@
+-- 試合終了時に3着だったプレイヤーの最大点数上位5件を取得する
+SELECT
+    ls.start_year || '-' || ls.end_year AS シーズン,
+    ss.stage AS ステージ,
+    g.date AS 試合日,
+    p.name AS プレイヤー名,
+    gpr.score AS 点数
+FROM game_player_result gpr
+-- プレイヤー情報の結合
+JOIN player p ON gpr.player_id = p.id
+-- 試合・シーズン情報の結合
+JOIN game g ON gpr.game_id = g.id
+JOIN season_stage ss ON g.season_stage_id = ss.id
+JOIN league_season ls ON ss.league_season_id = ls.id
+WHERE gpr.rank = 3
+ORDER BY gpr.score DESC
+LIMIT 5;

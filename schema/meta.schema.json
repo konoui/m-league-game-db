@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SQL クエリ例のメタデータ",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["description", "plan", "tables", "checks"],
+  "properties": {
+    "description": {
+      "description": "クエリの簡潔な説明。ディレクトリ名と一致させる。形式: [分析単位][対象別][記録・統計内容][範囲・条件][処理内容]クエリ",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "plan": {
+      "description": "分析の目的・指標定義・設計方針・出力方針を自然言語で書いた箇条書き。1 要素 1 項目で、記号は付けない",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "tables": {
+      "description": "SQL が参照するテーブル・ビュー名",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+    },
+    "checks": {
+      "description": "クエリ結果が満たすべき不変条件。DB が更新されても成り立つ、ドメイン上の性質を書く",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unique", "rules"],
+      "properties": {
+        "unique": {
+          "description": "結果の 1 行を一意に特定する出力カラムの組",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rows": {
+          "description": "結果の行数の範囲（例: 上位 10 件なら max: 10）",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "min": { "type": "integer", "minimum": 1 },
+            "max": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "rules": {
+          "description": "全行で真になる SQLite の条件式。出力カラム名で参照する。NULL になる行は違反とみなさない（NULL を禁止するなら IS NOT NULL を書く）",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

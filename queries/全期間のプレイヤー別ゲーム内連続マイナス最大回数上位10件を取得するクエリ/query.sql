@@ -1,0 +1,120 @@
+-- 被ツモ: ツモ上がりがあった局とツモった選手を事前計算
+-- idx_agari_target_id (target_player_id) でツモ（IS NULL）を効率的に絞り込む
+WITH tsumo_per_kyoku AS (
+    SELECT e.kyoku_id, ae.actor_player_id AS tsumo_player
+    FROM agari_event ae
+    JOIN event e ON ae.event_id = e.id
+    WHERE ae.target_player_id IS NULL
+),
+-- 流局ノーテン: ノーテン選手×局を事前計算
+-- idx_ryukyoku_player_tenpai (player_id, is_tenpai) で絞り込み
+-- 内側 EXISTS は kyoku_player_result ではなく ryukyoku_player の行ごとに1回のみ実行
+ryukyoku_noten_per_kyoku AS (
+    SELECT e.kyoku_id, rpe.player_id
+    FROM ryukyoku_player rpe
+    JOIN ryukyoku_event re ON rpe.ryukyoku_event_id = re.event_id
+    JOIN event e ON re.event_id = e.id
+    WHERE rpe.is_tenpai = 0
+      AND EXISTS (
+          SELECT 1
+          FROM ryukyoku_player rpe2
+          WHERE rpe2.ryukyoku_event_id = rpe.ryukyoku_event_id
+            AND rpe2.player_id != rpe.player_id
+            AND rpe2.is_tenpai = 1
+      )
+),
+-- リーチ後他者ロン: リーチ宣言者×局を事前計算
+-- event(kyoku_id, type) の idx_event_kyoku_type を活用するため type='ron' を明示
+reach_then_ron_per_kyoku AS (
+    SELECT DISTINCT e_rch.kyoku_id, rch.actor_player_id AS reach_player
+    FROM reach_event rch
+    JOIN event e_rch ON rch.event_id = e_rch.id
+    WHERE rch.is_accepted = 1
+      AND EXISTS (
+          SELECT 1
+          FROM event e_ae
+          JOIN agari_event ae2 ON ae2.event_id = e_ae.id
+          WHERE e_ae.kyoku_id = e_rch.kyoku_id
+            AND e_ae.type = 'ron'
+            AND ae2.actor_player_id != rch.actor_player_id
+            AND ae2.target_player_id IS NOT NULL
+            AND ae2.target_player_id != rch.actor_player_id
+      )
+),
+-- 各局でのプレイヤーのマイナス判定（被ツモ・流局ノーテン・リーチ後他者ロン）
+-- MATERIALIZED: ウィンドウ関数が参照する前に一度だけ実体化することで再評価を防ぐ
+kyoku_minus_flags AS MATERIALIZED (
+    SELECT
+        kpr.player_id,
+        k.game_id,
+        k.id AS kyoku_id,
+        CASE
+            WHEN tp.kyoku_id IS NOT NULL THEN 1
+            WHEN rn.kyoku_id IS NOT NULL THEN 1
+            WHEN rr.kyoku_id IS NOT NULL THEN 1
+            ELSE 0
+        END AS is_minus
+    FROM kyoku_player_result kpr
+    JOIN kyoku k ON kpr.kyoku_id = k.id
+    LEFT JOIN tsumo_per_kyoku tp
+           ON tp.kyoku_id = k.id AND tp.tsumo_player != kpr.player_id
+    LEFT JOIN ryukyoku_noten_per_kyoku rn
+           ON rn.kyoku_id = k.id AND rn.player_id = kpr.player_id
+    LEFT JOIN reach_then_ron_per_kyoku rr
+           ON rr.kyoku_id = k.id AND rr.reach_player = kpr.player_id
+),
+-- ゲーム・プレイヤーごとに局を時系列で並べ、アイランド法で連続グループを識別
+numbered AS (
+    SELECT
+        player_id,
+        game_id,
+        kyoku_id,
+        is_minus,
+        -- アイランド法: 全体連番とマイナス局のみの連番の差で連続グループを特定
+        ROW_NUMBER() OVER (PARTITION BY game_id, player_id ORDER BY kyoku_id) -
+        ROW_NUMBER() OVER (PARTITION BY game_id, player_id, is_minus ORDER BY kyoku_id) AS grp
+    FROM kyoku_minus_flags
+),
+-- 連続マイナスの各グループの長さを算出
+consecutive_minus_groups AS (
+    SELECT
+        game_id,
+        player_id,
+        grp,
+        COUNT(*) AS consecutive_count
+    FROM numbered
+    WHERE is_minus = 1
+    GROUP BY game_id, player_id, grp
+),
+-- ゲーム・プレイヤーごとの最大連続マイナス数
+max_consecutive_per_game AS (
+    SELECT
+        game_id,
+        player_id,
+        MAX(consecutive_count) AS max_consecutive_minus
+    FROM consecutive_minus_groups
+    GROUP BY game_id, player_id
+)
+-- 最終結果: 連続マイナス最大回数の上位10件を出力
+SELECT
+    ls.start_year || '-' || (ls.start_year + 1) AS シーズン,
+    ss.stage AS ステージ,
+    g.date AS 試合日,
+    g.stage_game_number AS ラウンド番号,
+    p.name AS プレイヤー名,
+    t.name AS チーム名,
+    mc.max_consecutive_minus AS 最大連続マイナス数
+FROM max_consecutive_per_game mc
+-- プレイヤー情報の結合
+JOIN player p ON mc.player_id = p.id
+-- 試合・シーズン情報の結合
+JOIN game g ON mc.game_id = g.id
+JOIN season_stage ss ON g.season_stage_id = ss.id
+JOIN league_season ls ON ss.league_season_id = ls.id
+-- チーム所属情報の結合
+JOIN player_team pt ON p.id = pt.player_id
+    AND ls.start_year >= pt.joined_season_year
+    AND ls.start_year <= pt.left_season_year
+JOIN team t ON pt.team_id = t.id
+ORDER BY mc.max_consecutive_minus DESC, ls.start_year DESC, g.date DESC
+LIMIT 10;

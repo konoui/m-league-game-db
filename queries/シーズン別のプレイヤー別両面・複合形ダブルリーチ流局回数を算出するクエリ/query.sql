@@ -1,0 +1,55 @@
+-- ダブル立直かつ両面・複合形待ちのリーチ宣言打牌イベントをユニークに特定する
+WITH double_reach_tenpai AS (
+    SELECT DISTINCT
+        tam.event_id,
+        de.actor_player_id
+    FROM tenpai_yaku tye
+    JOIN tenpai_agari_matrix tam ON tye.tenpai_agari_matrix_id = tam.id
+    -- 役名の確認
+    JOIN yaku_name yn ON tye.yaku_name_id = yn.id
+    -- リーチ宣言打牌からプレイヤー ID を取得（リーチ宣言打牌のみに絞る）
+    JOIN discard_event de ON de.event_id = tam.event_id AND de.is_reach_declaration = 1
+    -- 待ちタイプの確認
+    JOIN player_tenpai_state pts
+        ON pts.event_id = tam.event_id AND pts.player_id = de.actor_player_id
+    WHERE yn.name = 'ダブル立直'
+      AND pts.waiting_type IN ('両面', '複合形')
+),
+-- 流局した局を特定する
+ryukyoku_kyoku AS (
+    SELECT DISTINCT e.kyoku_id
+    FROM ryukyoku_event re
+    JOIN event e ON re.event_id = e.id
+),
+-- ダブル立直かつ両面・複合形待ちで流局した局・プレイヤーを特定する
+double_reach_ryukyoku AS (
+    SELECT
+        drt.actor_player_id,
+        e.kyoku_id
+    FROM double_reach_tenpai drt
+    -- 局 ID の取得
+    JOIN event e ON e.id = drt.event_id
+    -- 流局した局との突き合わせ
+    JOIN ryukyoku_kyoku rk ON rk.kyoku_id = e.kyoku_id
+)
+-- シーズン別・プレイヤー別に流局回数を集計する
+SELECT
+    ls.start_year || '-' || ls.end_year AS シーズン,
+    p.name AS プレイヤー名,
+    t.name AS チーム名,
+    COUNT(*) AS 流局回数
+FROM double_reach_ryukyoku drr
+-- 局・試合・シーズン情報の結合
+JOIN kyoku k ON drr.kyoku_id = k.id
+JOIN game g ON k.game_id = g.id
+JOIN season_stage ss ON g.season_stage_id = ss.id
+JOIN league_season ls ON ss.league_season_id = ls.id
+-- プレイヤー情報の結合
+JOIN player p ON drr.actor_player_id = p.id
+-- チーム所属情報の結合
+JOIN player_team pt ON drr.actor_player_id = pt.player_id
+    AND ls.start_year >= pt.joined_season_year
+    AND ls.start_year <= pt.left_season_year
+JOIN team t ON pt.team_id = t.id
+GROUP BY ls.id, drr.actor_player_id
+ORDER BY ls.start_year DESC, 流局回数 DESC;

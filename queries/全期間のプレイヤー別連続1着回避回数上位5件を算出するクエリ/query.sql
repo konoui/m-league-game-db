@@ -1,0 +1,70 @@
+-- 各プレイヤーの全試合結果を時系列順に取得
+WITH player_games AS (
+    SELECT 
+        p.name AS player_name,
+        t.name AS team_name,
+        ls.start_year AS season_year,
+        ss.stage,
+        g.date,
+        g.day_game_number,
+        gpr.rank,
+        -- 1着回避フラグ（1着以外なら1、1着なら0）
+        CASE WHEN gpr.rank != 1 THEN 1 ELSE 0 END AS is_not_first,
+        ROW_NUMBER() OVER (PARTITION BY p.id ORDER BY ls.start_year, ss.stage, g.date, g.day_game_number) AS game_sequence
+    FROM game_player_result gpr
+    -- プレイヤー情報の結合
+    JOIN player p ON gpr.player_id = p.id
+    -- 試合・シーズン情報の結合
+    JOIN game g ON gpr.game_id = g.id
+    JOIN season_stage ss ON g.season_stage_id = ss.id
+    JOIN league_season ls ON ss.league_season_id = ls.id
+    -- チーム所属情報の結合
+    JOIN player_team pt ON p.id = pt.player_id 
+        AND ls.start_year >= pt.joined_season_year 
+        AND ls.start_year <= pt.left_season_year
+    JOIN team t ON pt.team_id = t.id
+),
+-- 連続記録をグループ化するための識別子を生成
+streak_groups AS (
+    SELECT 
+        player_name,
+        team_name,
+        season_year,
+        stage,
+        date,
+        day_game_number,
+        rank,
+        is_not_first,
+        game_sequence,
+        -- 連続グループ識別子（同じ値の連続する行は同じグループになる）
+        game_sequence - ROW_NUMBER() OVER (PARTITION BY player_name, is_not_first ORDER BY game_sequence) AS streak_group
+    FROM player_games
+),
+-- 各連続記録の統計を集計
+consecutive_streaks AS (
+    SELECT 
+        player_name,
+        team_name,
+        streak_group,
+        COUNT(*) AS streak_length,
+        -- 記録期間の情報
+        MIN(season_year) AS streak_start_season,
+        MAX(season_year) AS streak_end_season,
+        MIN(date) AS streak_start_date,
+        MAX(date) AS streak_end_date
+    FROM streak_groups
+    WHERE is_not_first = 1  -- 1着回避の連続記録のみ
+    GROUP BY player_name, team_name, streak_group
+)
+-- 最終結果：連続1着回避回数の上位5件を出力
+SELECT 
+    player_name AS プレイヤー名,
+    team_name AS チーム名,
+    streak_length AS 連続1着回避回数,
+    streak_start_season AS 記録開始シーズン年,
+    streak_end_season AS 記録終了シーズン年,
+    streak_start_date AS 記録開始日,
+    streak_end_date AS 記録終了日
+FROM consecutive_streaks
+ORDER BY streak_length DESC, プレイヤー名
+LIMIT 5;

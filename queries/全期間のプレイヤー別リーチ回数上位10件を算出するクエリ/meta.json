@@ -1,0 +1,38 @@
+{
+  "description": "全期間のプレイヤー別リーチ回数上位10件を算出するクエリ",
+  "plan": [
+    "全期間の試合データからプレイヤー別のリーチ回数を集計",
+    "試合単位でのリーチ統計を算出し、最もリーチ回数が多かった試合を特定",
+    "シーズン年、ステージ、試合日、プレイヤー名、チーム名と共に出力",
+    "リーチ回数の多い順に上位10件を抽出"
+  ],
+  "tables": [
+    "game",
+    "season_stage",
+    "league_season",
+    "kyoku",
+    "event",
+    "reach_event",
+    "player",
+    "player_team",
+    "team"
+  ],
+  "checks": {
+    "unique": [
+      "試合日",
+      "試合番号",
+      "プレイヤー名"
+    ],
+    "rows": {
+      "max": 10
+    },
+    "rules": [
+      "シーズン年 BETWEEN 2018 AND 2100",
+      "ステージ IN ('regular', 'semifinal', 'final')",
+      "試合日 GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'",
+      "プレイヤー名 IS NOT NULL",
+      "チーム名 IS NOT NULL",
+      "リーチ回数 BETWEEN 1 AND 総局数"
+    ]
+  }
+}

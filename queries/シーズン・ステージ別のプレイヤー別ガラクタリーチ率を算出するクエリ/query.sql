@@ -1,0 +1,98 @@
+-- リーチイベントに対応するリーチ宣言打牌イベントを特定する
+WITH reach_discard AS (
+    SELECT
+        re.event_id AS reach_event_id,
+        re.actor_player_id,
+        e_r.kyoku_id,
+        e_r.event_order AS reach_order,
+        e_d.id AS discard_event_id
+    FROM reach_event re
+    JOIN event e_r ON re.event_id = e_r.id
+    -- リーチイベントの直後のイベントがリーチ宣言打牌
+    JOIN event e_d ON e_d.kyoku_id = e_r.kyoku_id
+        AND e_d.event_order = e_r.event_order + 1
+    WHERE re.is_accepted = 1
+),
+-- 各リーチのガラクタリーチ条件を判定する
+reach_classification AS (
+    SELECT
+        rd.reach_event_id,
+        rd.actor_player_id,
+        rd.kyoku_id,
+        rd.reach_order,
+        -- 愚形待ち判定（カンチャン・ペンチャン・単騎）
+        CASE WHEN pts.waiting_type IN ('カンチャン', 'ペンチャン', '単騎') THEN 1 ELSE 0 END AS is_gukei,
+        -- カンなし判定（局内でリーチ前に誰もカンをしていないか）
+        CASE WHEN EXISTS (
+            SELECT 1 FROM event e_kan
+            WHERE e_kan.kyoku_id = rd.kyoku_id
+              AND e_kan.type IN ('ankan', 'daiminkan', 'shominkan')
+              AND e_kan.event_order < rd.reach_order
+        ) THEN 1 ELSE 0 END AS has_kan,
+        -- リーチ以外の確定役あり判定（七対子・タンヤオ・ドラ・赤ドラ等が付く待ちがあるか）
+        -- waiting_tile は赤黒区別なし5m/5p/5sのため赤ドラは手牌由来のみ。5待ち（手牌に赤なし）は赤ドラなしとなりガラクタリーチに含まれる
+        CASE WHEN EXISTS (
+            SELECT 1 FROM tenpai_agari_matrix tam
+            JOIN tenpai_yaku tye ON tye.tenpai_agari_matrix_id = tam.id
+            JOIN yaku_name yn ON tye.yaku_name_id = yn.id
+            WHERE tam.event_id = rd.discard_event_id
+              AND yn.name NOT IN ('立直', '一発', '裏ドラ', '門前清自摸和', '嶺上開花')
+        ) THEN 1 ELSE 0 END AS has_other_yaku
+    FROM reach_discard rd
+    -- リーチ宣言打牌時の聴牌情報を結合
+    JOIN player_tenpai_state pts
+        ON pts.event_id = rd.discard_event_id AND pts.player_id = rd.actor_player_id
+),
+-- シーズン・ステージ・プレイヤー・親子別にガラクタリーチ数とリーチ数を集計する
+stats AS (
+    SELECT
+        ls.start_year,
+        ss.stage,
+        rc.actor_player_id,
+        kpr.player_wind,
+        COUNT(*) AS reach_count,
+        SUM(CASE WHEN rc.is_gukei = 1 AND rc.has_kan = 0 AND rc.has_other_yaku = 0
+            THEN 1 ELSE 0 END) AS garakuta_count
+    FROM reach_classification rc
+    -- 局・試合・シーズン情報の結合
+    JOIN kyoku k ON rc.kyoku_id = k.id
+    JOIN game g ON k.game_id = g.id
+    JOIN season_stage ss ON g.season_stage_id = ss.id
+    JOIN league_season ls ON ss.league_season_id = ls.id
+    -- 親子情報の結合
+    JOIN kyoku_player_result kpr
+        ON kpr.kyoku_id = rc.kyoku_id AND kpr.player_id = rc.actor_player_id
+    -- チーム所属情報の結合
+    JOIN player_team pt ON rc.actor_player_id = pt.player_id
+        AND ls.start_year >= pt.joined_season_year
+        AND ls.start_year <= pt.left_season_year
+    GROUP BY ls.start_year, ss.stage, rc.actor_player_id, kpr.player_wind
+)
+-- 最終結果: プレイヤー名・チーム名を付与して全体・親・子ごとにガラクタリーチ率を出力する
+SELECT
+    start_year || '-' || (start_year + 1) AS シーズン,
+    stage AS ステージ,
+    p.name AS プレイヤー名,
+    t.name AS チーム名,
+    -- 全体集計
+    SUM(reach_count) AS リーチ数,
+    SUM(garakuta_count) AS ガラクタリーチ数,
+    ROUND(SUM(garakuta_count) * 100.0 / SUM(reach_count), 2) AS ガラクタリーチ率,
+    -- 親のとき
+    SUM(CASE WHEN player_wind = '1z' THEN garakuta_count ELSE 0 END) AS ガラクタリーチ数_親,
+    ROUND(SUM(CASE WHEN player_wind = '1z' THEN garakuta_count ELSE 0 END) * 100.0 /
+          NULLIF(SUM(CASE WHEN player_wind = '1z' THEN reach_count ELSE 0 END), 0), 2) AS ガラクタリーチ率_親,
+    -- 子のとき
+    SUM(CASE WHEN player_wind != '1z' THEN garakuta_count ELSE 0 END) AS ガラクタリーチ数_子,
+    ROUND(SUM(CASE WHEN player_wind != '1z' THEN garakuta_count ELSE 0 END) * 100.0 /
+          NULLIF(SUM(CASE WHEN player_wind != '1z' THEN reach_count ELSE 0 END), 0), 2) AS ガラクタリーチ率_子
+FROM stats
+-- プレイヤー名の結合
+JOIN player p ON stats.actor_player_id = p.id
+-- チーム名の結合
+JOIN player_team pt ON stats.actor_player_id = pt.player_id
+    AND stats.start_year >= pt.joined_season_year
+    AND stats.start_year <= pt.left_season_year
+JOIN team t ON pt.team_id = t.id
+GROUP BY start_year, stage, actor_player_id
+ORDER BY start_year DESC, stage, ガラクタリーチ率 DESC;

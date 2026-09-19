@@ -1,0 +1,60 @@
+-- 各プレイヤーの試合結果を時系列順に整理し、1着以外判定を追加
+WITH player_games AS (
+    SELECT 
+        p.id AS player_id,
+        p.name AS player_name,
+        t.name AS team_name,
+        ls.start_year AS season_year,
+        ss.stage,
+        g.date,
+        g.day_game_number,
+        gpr.rank,
+        -- 1着以外フラグの設定
+        CASE WHEN gpr.rank != 1 THEN 1 ELSE 0 END AS is_not_first,
+        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.day_game_number) AS game_sequence
+    FROM game_player_result gpr
+    -- プレイヤー情報の結合
+    JOIN player p ON gpr.player_id = p.id
+    -- 試合・シーズン情報の結合
+    JOIN game g ON gpr.game_id = g.id
+    JOIN season_stage ss ON g.season_stage_id = ss.id
+    JOIN league_season ls ON ss.league_season_id = ls.id
+    -- チーム所属情報の結合
+    JOIN player_team pt ON p.id = pt.player_id 
+        AND ls.start_year >= pt.joined_season_year 
+        AND ls.start_year <= pt.left_season_year
+    JOIN team t ON pt.team_id = t.id
+),
+-- 連続する1着以外の期間をグループ化
+streak_groups AS (
+    SELECT 
+        *,
+        game_sequence - ROW_NUMBER() OVER (PARTITION BY player_id, season_year, stage, is_not_first ORDER BY game_sequence) AS streak_group
+    FROM player_games
+),
+-- 各連続期間の長さと期間を算出
+consecutive_streaks AS (
+    SELECT 
+        player_name,
+        team_name,
+        season_year,
+        stage,
+        COUNT(*) AS streak_length,
+        MIN(date) AS streak_start_date,
+        MAX(date) AS streak_end_date
+    FROM streak_groups
+    WHERE is_not_first = 1
+    GROUP BY player_name, team_name, season_year, stage, streak_group
+)
+-- 最終結果: 連続1着以外回数の上位10件を出力
+SELECT 
+    player_name AS プレイヤー名,
+    team_name AS チーム名,
+    season_year || '-' || (season_year + 1) AS シーズン,
+    stage AS ステージ,
+    streak_length AS 連続1着以外回数,
+    streak_start_date AS 記録開始日,
+    streak_end_date AS 記録終了日
+FROM consecutive_streaks
+ORDER BY streak_length DESC, プレイヤー名
+LIMIT 10;

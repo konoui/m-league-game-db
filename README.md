@@ -22,6 +22,8 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 [こちらを参照ください。](./TABLE.md)
 
+[変更履歴はこちらを参照ください。](./DB_CHANGELOG.md)
+
 ## SQL クエリ例
 
 [こちらを参照ください。](./query-examples/README.md)
@@ -34,6 +36,10 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 [こちらを参照ください。](./YAKU_NAMES.md)
 
+## 新しいクエリの作成
+
+[こちらを参照ください。](./NEW_QUERY.md)
+
 ## 留意事項
 
 - データの正確性には注意をしていますが、間違いなどあれば Issue より報告いただけると助かります。
@@ -44,10 +50,9 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 - 機能要望リクエストなどあれば Issue を作成ください。
 
-## データの利用について
+## データベースの利用について
 
 - 利用許可の申請や利用の明記は不要です。自由にお使いください。
-- 利用していただけている場合は、Issue やSNS などでひと言いただけると励みになります。
 - M リーグをより楽しんだり盛り上げていただけると幸いです。
 
 ## 関連記事

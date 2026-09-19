@@ -1,0 +1,37 @@
+{
+  "description": "全期間のプレイヤー別裏ドラ3上がり詳細情報を取得するクエリ",
+  "plan": [
+    "全期間にわたって裏ドラ3翻で和了したプレイヤーの詳細情報を抽出する",
+    "面前（鳴いていない）での和了に限定して分析対象を絞り込む",
+    "プレイヤー名、所属チーム、シーズン年、対局日、役構成の詳細を出力する",
+    "裏ドラが3翻ちょうどの和了のみを対象とし、それ以上の翻数は除外する",
+    "結果をシーズン年、対局日、プレイヤー名の順でソートして時系列で表示する"
+  ],
+  "tables": [
+    "kyoku",
+    "game",
+    "season_stage",
+    "league_season",
+    "event",
+    "agari_event",
+    "yaku_name",
+    "player",
+    "player_team",
+    "team",
+    "agari_yaku"
+  ],
+  "checks": {
+    "unique": [
+      "date",
+      "player_name",
+      "description"
+    ],
+    "rules": [
+      "start_year BETWEEN 2018 AND 2100",
+      "date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'",
+      "player_name IS NOT NULL",
+      "team_name IS NOT NULL",
+      "description IS NOT NULL"
+    ]
+  }
+}

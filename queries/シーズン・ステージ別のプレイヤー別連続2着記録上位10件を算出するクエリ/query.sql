@@ -1,0 +1,67 @@
+-- プレイヤーの各試合結果と2着判定を取得
+WITH player_games AS (
+    SELECT 
+        p.name AS player_name,
+        t.name AS team_name,
+        ls.start_year AS season_year,
+        ss.stage,
+        g.date,
+        gpr.rank,
+        -- 2着判定フラグ
+        CASE WHEN gpr.rank = 2 THEN 1 ELSE 0 END AS is_second,
+        ROW_NUMBER() OVER (PARTITION BY p.id, ls.start_year, ss.stage ORDER BY g.date, g.day_game_number) AS game_sequence
+    FROM game_player_result gpr
+    -- プレイヤー情報の結合
+    JOIN player p ON gpr.player_id = p.id
+    -- 試合・シーズン情報の結合
+    JOIN game g ON gpr.game_id = g.id
+    JOIN season_stage ss ON g.season_stage_id = ss.id
+    JOIN league_season ls ON ss.league_season_id = ls.id
+    -- チーム所属情報の結合
+    JOIN player_team pt ON p.id = pt.player_id 
+        AND ls.start_year >= pt.joined_season_year 
+        AND ls.start_year <= pt.left_season_year
+    JOIN team t ON pt.team_id = t.id
+),
+-- 連続記録のグループ化のための準備
+streak_groups AS (
+    SELECT 
+        player_name,
+        team_name,
+        season_year,
+        stage,
+        date,
+        rank,
+        is_second,
+        game_sequence,
+        -- 連続記録グループの識別子を生成
+        game_sequence - ROW_NUMBER() OVER (PARTITION BY player_name, season_year, stage, is_second ORDER BY game_sequence) AS streak_group
+    FROM player_games
+),
+-- 連続2着記録の集計
+consecutive_streaks AS (
+    SELECT 
+        player_name,
+        team_name,
+        season_year,
+        stage,
+        streak_group,
+        COUNT(*) AS streak_length,
+        MIN(date) AS streak_start_date,
+        MAX(date) AS streak_end_date
+    FROM streak_groups
+    WHERE is_second = 1
+    GROUP BY player_name, team_name, season_year, stage, streak_group
+)
+-- 最終結果: 連続2着記録上位10件を出力
+SELECT 
+    season_year AS シーズン年,
+    stage AS ステージ,
+    player_name AS プレイヤー名,
+    team_name AS チーム名,
+    streak_length AS 連続二着回数,
+    streak_start_date AS 記録開始日,
+    streak_end_date AS 記録終了日
+FROM consecutive_streaks
+ORDER BY streak_length DESC, season_year DESC, stage, プレイヤー名
+LIMIT 10;
