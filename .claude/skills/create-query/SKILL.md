@@ -11,7 +11,7 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 
 - `references/query-format.md`: ファイル形式・命名・品質基準。**作成前に必ず読む**
 - `references/analysis-perspectives.md`: 指標の定義と分析観点
-- `TABLE.md`: テーブル定義。スキーマは `sqlite3 -readonly database.sqlite3 ".schema <table>"` でも確認できる
+- `TABLE.sqlite3.md`: テーブル定義。スキーマは `sqlite3 -readonly database.sqlite3 ".schema <table>"` でも確認できる
 - `PAI_FORMAT.md`（牌の表し方）、`YAKU_NAMES.md`（役名）、`MLEAGUE.md`（M リーグの情報。あれば読む）
 - 既存の `queries/*/`: 同じ結合・集計パターンを探す手本
 

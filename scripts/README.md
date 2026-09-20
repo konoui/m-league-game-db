@@ -41,7 +41,7 @@ uv run scripts/render.py
 - `MLEAGUE.md`: 非公開のためワークフローでは配布できない
 - `query-examples/`: `render.py` で再生成する
 
-`TABLE.md` / `DB_CHANGELOG.md` / `DB_NAMING.md` / `YAKU_NAMES.md` / `PAI_FORMAT.md` は
+`TABLE.sqlite3.md` / `TABLE.duckdb.md` / `DB_CHANGELOG.md` / `DB_NAMING.md` / `YAKU_NAMES.md` / `PAI_FORMAT.md` は
 m-league-score-sheet の sync-db-docs ワークフローが main へ push するので、make.sh では扱わない。
 古い checkout から生成すると同期済みの内容を巻き戻してしまうため。
 ローカルで生成物を確認したいときは m-converter 側の `scripts/make-table-doc.py` を直接実行する。

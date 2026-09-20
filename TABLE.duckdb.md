@@ -1,5 +1,9 @@
 # データベースのテーブル、ビューとカラムの説明
 
+> [!NOTE]
+> 主キーと外部キーは、行の粒度と結合の手がかりとして記載しています。
+> このデータベースでは制約として定義していないため、DB 側では検査されません。
+
 <!-- TOC BEGIN -->
 
 - [基本テーブル](#基本テーブル)
@@ -35,6 +39,7 @@
 - [その他のテーブル](#その他のテーブル)
   - [yaku_name（役定義のテーブル）](#yaku_name役定義のテーブル)
   - [player_state（ある巡目におけるプレイヤーの状態）](#player_stateある巡目におけるプレイヤーの状態)
+  - [player_state_called_block（ある巡目に晒していた鳴きの面子）](#player_state_called_blockある巡目に晒していた鳴きの面子)
   - [player_tenpai_state（聴牌時のプレイヤーの状態）](#player_tenpai_state聴牌時のプレイヤーの状態)
   - [tenpai_agari_matrix（聴牌時のあがり可能性マトリックス）](#tenpai_agari_matrix聴牌時のあがり可能性マトリックス)
   - [tenpai_yaku（聴牌時のあがり役）](#tenpai_yaku聴牌時のあがり役)
@@ -217,13 +222,13 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
 
-| カラム名          | データ型 | NULL 許可 | 説明                                                    |
-| ----------------- | -------- | --------- | ------------------------------------------------------- |
-| event_id          | integer  | NO        | イベント ID                                             |
-| actor_player_id   | integer  | NO        | 配牌を受け取ったプレイヤー ID                           |
-| hand              | varchar  | NO        | 配牌時の手牌                                            |
-| is_tenho_possible | boolean  | NO        | 配牌時に天和チャンスであるか（親でシャンテン数が 0 か） |
-| is_chiho_possible | boolean  | NO        | 配牌時に地和チャンスであるか（子でシャンテン数が 0 か） |
+| カラム名          | データ型  | NULL 許可 | 説明                                                    |
+| ----------------- | --------- | --------- | ------------------------------------------------------- |
+| event_id          | integer   | NO        | イベント ID                                             |
+| actor_player_id   | integer   | NO        | 配牌を受け取ったプレイヤー ID                           |
+| hand              | varchar[] | NO        | 牌ごとの要素を持つ配列                                  |
+| is_tenho_possible | boolean   | NO        | 配牌時に天和チャンスであるか（親でシャンテン数が 0 か） |
+| is_chiho_possible | boolean   | NO        | 配牌時に地和チャンスであるか（子でシャンテン数が 0 か） |
 
 #### agari_event（ツモあがり、ロンあがりイベント）
 
@@ -233,23 +238,23 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id, target_player_id -> player.id
 
-| カラム名           | データ型                                             | NULL 許可 | 説明                                                                                                                                                           |
-| ------------------ | ---------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| event_id           | integer                                              | NO        | イベント ID                                                                                                                                                    |
-| actor_player_id    | integer                                              | NO        | あがったプレイヤー ID                                                                                                                                          |
-| target_player_id   | integer                                              | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）                                                                                                               |
-| agari_points       | integer                                              | NO        | 和了点（本場・供託を含まない。満貫なら 8000）                                                                                                                  |
-| honba_points       | integer                                              | NO        | 本場の加点（本場数 × 300）                                                                                                                                     |
-| kyotaku_points     | integer                                              | NO        | 回収した供託（リーチ棒の本数 × 1000）。その局で自分が出したリーチ棒も含む                                                                                      |
-| revenue_points     | integer                                              | NO        | あがりで得た点数の合計（= agari_points + honba_points + kyotaku_points）。生成列なので内訳と必ず一致する                                                       |
-| agari_tile         | varchar                                              | NO        | ロン（放銃）牌もしくはツモあがり牌                                                                                                                             |
-| agari_waiting_type | ENUM(両面、単騎、カンチャン、ペンチャン、シャンポン) | NO        | 和了牌が入った面子の形。手牌全体の待ちの形は player_tenpai_state.waiting_type で、そちらは複合形・ノベタン・亜両面も取る（粒度が違うので一致しないことがある） |
-| fu                 | integer                                              | NO        | 合計の符                                                                                                                                                       |
-| han                | integer                                              | NO        | 合計の翻数（役満判定には使わない。is_yakuman を参照する）                                                                                                      |
-| is_called          | boolean                                              | NO        | 鳴いたあがりか（暗槓を含む）                                                                                                                                   |
-| is_menzen          | boolean                                              | NO        | 面前のあがりか                                                                                                                                                 |
-| is_yakuman         | boolean                                              | NO        | 役満か（han >= 13 とは一致しない。数え役満がないルールのため）                                                                                                 |
-| description        | varchar                                              | NO        | 役と点数の説明                                                                                                                                                 |
+| カラム名           | データ型                                             | NULL 許可 | 説明                                                                                                                                                                                                |
+| ------------------ | ---------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| event_id           | integer                                              | NO        | イベント ID                                                                                                                                                                                         |
+| actor_player_id    | integer                                              | NO        | あがったプレイヤー ID                                                                                                                                                                               |
+| target_player_id   | integer                                              | YES       | 放銃したプレイヤー ID（ツモあがりの場合は null）                                                                                                                                                    |
+| agari_points       | integer                                              | NO        | 和了点（本場・供託を含まない。満貫なら 8000）                                                                                                                                                       |
+| honba_points       | integer                                              | NO        | 本場の加点（本場数 × 300）                                                                                                                                                                          |
+| kyotaku_points     | integer                                              | NO        | 回収した供託（リーチ棒の本数 × 1000）。その局で自分が出したリーチ棒も含む                                                                                                                           |
+| revenue_points     | integer                                              | NO        | あがりで得た点数の合計（= agari_points + honba_points + kyotaku_points）。生成列なので内訳と必ず一致する。SELECT では普通の列として使えるが、PRAGMA table_info には現れない（table_xinfo には出る） |
+| agari_tile         | varchar                                              | NO        | ロン（放銃）牌もしくはツモあがり牌                                                                                                                                                                  |
+| agari_waiting_type | ENUM(両面、単騎、カンチャン、ペンチャン、シャンポン) | NO        | 和了牌が入った面子の形。手牌全体の待ちの形は player_tenpai_state.waiting_type で、そちらは複合形・ノベタン・亜両面も取る（粒度が違うので一致しないことがある）                                      |
+| fu                 | integer                                              | NO        | 合計の符                                                                                                                                                                                            |
+| han                | integer                                              | NO        | 合計の翻数（役満判定には使わない。is_yakuman を参照する）                                                                                                                                           |
+| is_called          | boolean                                              | NO        | 鳴いたあがりか（暗槓を含む）                                                                                                                                                                        |
+| is_menzen          | boolean                                              | NO        | 面前のあがりか                                                                                                                                                                                      |
+| is_yakuman         | boolean                                              | NO        | 役満か（han >= 13 とは一致しない。数え役満がないルールのため）                                                                                                                                      |
+| description        | varchar                                              | NO        | 役と点数の説明                                                                                                                                                                                      |
 
 ##### agari_yaku（あがり時の役）
 
@@ -431,22 +436,48 @@
 **複合主キー**: event_id, player_id
 **外部キー**: event_id -> event.id, player_id -> player.id
 
-| カラム名                       | データ型 | NULL 許可 | 説明                                                                                                                                         |
-| ------------------------------ | -------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| event_id                       | integer  | NO        | イベント ID                                                                                                                                  |
-| player_id                      | integer  | NO        | プレイヤー ID                                                                                                                                |
-| hand                           | varchar  | NO        | 手牌                                                                                                                                         |
-| called_blocks                  | varchar  | NO        | 鳴いて晒した牌のブロック（,区切り）                                                                                                          |
-| shanten_count                  | integer  | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）                                                                           |
-| standard_type_shanten_count    | integer  | NO        | 標準形のシャンテン数                                                                                                                         |
-| seven_pairs_shanten_count      | integer  | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                                                                                           |
-| thirteen_orphans_shanten_count | integer  | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                                                                                         |
-| is_reached                     | boolean  | NO        | リーチ状態か                                                                                                                                 |
-| is_furiten                     | boolean  | NO        | フリテン状態か                                                                                                                               |
-| turn_number                    | integer  | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報                                                                   |
-| call_count                     | integer  | NO        | 鳴いた回数、ただし暗槓を含む                                                                                                                 |
-| furo_count                     | integer  | NO        | 副露数。チー・ポン・大明槓で晒した面子の数で、暗槓は含めず加槓は元のポンのまま数える（集計ビューの furo_count は副露した局数で単位が異なる） |
-| is_menzen                      | boolean  | NO        | 面前か                                                                                                                                       |
+| カラム名                       | データ型  | NULL 許可 | 説明                                                                                                                                         |
+| ------------------------------ | --------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| event_id                       | integer   | NO        | イベント ID                                                                                                                                  |
+| player_id                      | integer   | NO        | プレイヤー ID                                                                                                                                |
+| hand                           | varchar[] | NO        | 牌ごとの要素を持つ配列                                                                                                                       |
+| called_blocks                  | varchar   | NO        | 鳴いて晒した牌のブロック（,区切り）。1 面子ずつ引きたいときは player_state_called_block を使う                                               |
+| shanten_count                  | integer   | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）                                                                           |
+| standard_type_shanten_count    | integer   | NO        | 標準形のシャンテン数                                                                                                                         |
+| seven_pairs_shanten_count      | integer   | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                                                                                           |
+| thirteen_orphans_shanten_count | integer   | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                                                                                         |
+| is_reached                     | boolean   | NO        | リーチ状態か                                                                                                                                 |
+| is_furiten                     | boolean   | NO        | フリテン状態か                                                                                                                               |
+| turn_number                    | integer   | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報                                                                   |
+| call_count                     | integer   | NO        | 鳴いた回数、ただし暗槓を含む                                                                                                                 |
+| furo_count                     | integer   | NO        | 副露数。チー・ポン・大明槓で晒した面子の数で、暗槓は含めず加槓は元のポンのまま数える（集計ビューの furo_count は副露した局数で単位が異なる） |
+| is_menzen                      | boolean   | NO        | 面前か                                                                                                                                       |
+
+### player_state_called_block（ある巡目に晒していた鳴きの面子）
+
+> [!NOTE]
+> player_state.called_blocks を 1 面子 1 行に分解したもの。文字列を解析せずに鳴きの内容を引ける。
+> player_state と同じ (event_id, player_id) で結合できるので、巡目・シャンテン数・手牌・打牌といった
+> その時点の状態と、鳴きの内容を組み合わせて分析できる。
+> 例: 副露数ごとの打牌傾向、字牌をポンしている局面のシャンテン数分布、テンパイ時の副露構成。
+> 鳴きイベント (chi_event など) からでも同じ集計はできるが、event_order による範囲結合と
+> 加槓の置き換えを自分で扱う必要がある。
+> 同じ面子はその局の以降の状態にも現れるため、行はのべ数になる。鳴いた回数や鳴いた相手を数えるなら
+> 鳴きイベントを使う。
+> ごくまれに元の牌譜に面子として成立しない鳴きが含まれるが、牌譜のまま記録している。
+
+**複合主キー**: event_id, player_id, block_number
+**外部キー**: (event_id, player_id) -> player_state.(event_id, player_id)
+
+| カラム名               | データ型  | NULL 許可 | 説明                                                                                              |
+| ---------------------- | --------- | --------- | ------------------------------------------------------------------------------------------------- |
+| event_id               | integer   | NO        | イベント ID                                                                                       |
+| player_id              | integer   | NO        | プレイヤー ID                                                                                     |
+| block_number           | integer   | NO        | called_blocks の左から何番目の面子か（1 始まり）                                                  |
+| call_type              | varchar   | NO        | 副露の種類（chi, pon, daiminkan, shominkan, ankan）                                               |
+| tiles                  | varchar[] | NO        | 牌ごとの要素を持つ配列                                                                            |
+| called_tile            | varchar   | YES       | 他家から受け取った牌。暗槓は null                                                                 |
+| from_relative_position | integer   | YES       | 牌を出した相手の相対位置（1 が下家、2 が対面、3 が上家）。暗槓は null。加槓は元のポンの相手を表す |
 
 ### player_tenpai_state（聴牌時のプレイヤーの状態）
 
@@ -460,7 +491,7 @@
 | ------------------------- | ------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------- |
 | event_id                  | integer                                                                        | NO        | イベント ID                                                                                                |
 | player_id                 | integer                                                                        | NO        | プレイヤー ID                                                                                              |
-| waiting_tiles             | varchar                                                                        | NO        | 待ち牌                                                                                                     |
+| waiting_tiles             | varchar[]                                                                      | NO        | 牌ごとの要素を持つ配列                                                                                     |
 | waiting_type              | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、ノベタン、亜両面、複合形) | NO        | 待ちのタイプ                                                                                               |
 | tile_type_count           | integer                                                                        | NO        | 待ち牌の種類                                                                                               |
 | ideal_tile_count          | integer                                                                        | NO        | 論理的な（平面の）待ち牌の数                                                                               |

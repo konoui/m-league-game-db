@@ -125,7 +125,7 @@ SQL が参照するテーブル・ビューを列挙する。`uv run scripts/val
 - 1 ファイル 1 文で、読み取り専用（SELECT / WITH のみ）(validate)
 - 末尾に `;` を付ける (validate)
 - 結果が 1 行以上返る (validate)
-- テーブル名・カラム名は `TABLE.md` に従う
+- テーブル名・カラム名は `TABLE.sqlite3.md` に従う
 - 出力カラムの別名はなるべく日本語にする（例: `AS プレイヤー名`）
 - シーズンは `start_year` を使う。所属チームは `player_team` の `joined_season_year` 〜 `left_season_year` の範囲で絞り込む
 

@@ -11,7 +11,7 @@ description: queries/ の既存 SQL クエリ例をレビューし、命名・pl
 
 - `../create-query/references/query-format.md`: 形式・命名・品質基準
 - `../create-query/references/analysis-perspectives.md`: 指標の定義
-- `TABLE.md`: テーブル定義
+- `TABLE.sqlite3.md`: テーブル定義
 
 ## 手順
 

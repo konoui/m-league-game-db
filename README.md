@@ -18,9 +18,26 @@ curl -L -O https://github.com/konoui/m-league-game-db/releases/latest/download/d
 sqlite3 database.sqlite3 "SELECT * FROM player;"
 ```
 
+### DuckDB 版
+
+同じ内容を DuckDB 形式でも配布しています。集計が桁違いに速く、ファイルも小さくなります。
+テーブル・ビュー・列の名前と内容は SQLite 版と同じなので、クエリ例はそのまま使えます。
+
+```bash
+curl -L -O https://github.com/konoui/m-league-game-db/releases/latest/download/duckdb.zip
+```
+
+実行例
+
+```bash
+duckdb database.duckdb "SELECT * FROM player;"
+```
+
+読み取り専用の配布物のため、主キーと外部キーは付けていません（CHECK 制約は残しています）。
+
 ## テーブル定義
 
-[こちらを参照ください。](./TABLE.md)
+[SQLite 版](./TABLE.sqlite3.md) と [DuckDB 版](./TABLE.duckdb.md) があります。
 
 [変更履歴はこちらを参照ください。](./DB_CHANGELOG.md)
 
