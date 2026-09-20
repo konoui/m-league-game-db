@@ -90,5 +90,5 @@ JOIN player_team pt ON ko.actor_player_id = pt.player_id
 JOIN team t ON pt.team_id = t.id
 -- 不成功局のみ集計
 WHERE ko.outcome IS NOT NULL
-GROUP BY ls.id, ko.actor_player_id
+GROUP BY ls.id, ls.start_year, ls.end_year, ko.actor_player_id, p.name, t.name
 ORDER BY ls.start_year DESC, 不成功合計 DESC;

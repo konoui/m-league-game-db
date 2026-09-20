@@ -63,5 +63,5 @@ JOIN player_team pt ON mc.actor_player_id = pt.player_id
     AND ls.start_year >= pt.joined_season_year
     AND ls.start_year <= pt.left_season_year
 JOIN team t ON pt.team_id = t.id
-GROUP BY ls.id, ss.id, mc.actor_player_id
+GROUP BY ls.id, ls.start_year, ls.end_year, ss.id, ss.stage, mc.actor_player_id, p.name, t.name
 ORDER BY ls.start_year DESC, ss.stage, 跨ぎ筋上がり割合 DESC;

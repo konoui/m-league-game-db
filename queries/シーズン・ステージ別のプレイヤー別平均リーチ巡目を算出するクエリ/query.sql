@@ -41,7 +41,7 @@ player_reach_turn_stats AS (
         AND ls.start_year >= pt.joined_season_year
         AND ls.start_year <= pt.left_season_year
     JOIN team t ON pt.team_id = t.id
-    GROUP BY ls.start_year, ss.stage, p.id, t.name
+    GROUP BY ls.start_year, ss.stage, p.id, p.name, t.name
 )
 -- 最終結果: 平均リーチ巡目と序盤・中盤・終盤ごとのリーチの割合を出力する
 SELECT

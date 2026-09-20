@@ -1,6 +1,6 @@
 -- 暦年別のプレイヤー別1着獲得回数を算出する
 SELECT 
-    strftime('%Y', g.date) AS 暦年,
+    substr(g.date, 1, 4) AS 暦年,
     p.name AS プレイヤー名,
     t.name AS チーム名,
     COUNT(*) AS '1着獲得回数'
@@ -17,5 +17,5 @@ JOIN player_team pt ON p.id = pt.player_id
     AND ls.start_year <= pt.left_season_year
 JOIN team t ON pt.team_id = t.id
 WHERE gpr.rank = 1
-GROUP BY strftime('%Y', g.date), p.id, t.name
-ORDER BY 暦年 DESC, '1着獲得回数' DESC;
+GROUP BY substr(g.date, 1, 4), p.id, p.name, t.name
+ORDER BY 暦年 DESC, "1着獲得回数" DESC;

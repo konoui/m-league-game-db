@@ -32,7 +32,7 @@ player_reach_stats AS (
         AND ls.start_year >= pt.joined_season_year
         AND ls.start_year <= pt.left_season_year
     JOIN team t ON pt.team_id = t.id
-    GROUP BY ls.start_year, ss.stage, p.id, t.name
+    GROUP BY ls.start_year, ss.stage, p.id, p.name, t.name
 )
 -- 最終結果: 先制リーチ率を算出して出力
 SELECT 
