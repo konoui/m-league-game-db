@@ -46,6 +46,23 @@ m-league-score-sheet の sync-db-docs ワークフローが main へ push する
 古い checkout から生成すると同期済みの内容を巻き戻してしまうため。
 ローカルで生成物を確認したいときは m-converter 側の `scripts/make-table-doc.py` を直接実行する。
 
+## validate-duckdb.py
+
+`queries/` の SQL が DuckDB 版のデータベースでも実行できるか検証する。
+SQLite 版の検証は validate.py が行い、こちらは DuckDB 固有の差だけを見る。
+
+```bash
+uv run scripts/validate-duckdb.py [--db FILE] [queries/<description> ...]
+```
+
+つまずきやすいのは次の 2 つ。
+
+- **GROUP BY**: SQLite は GROUP BY にない列の select を許すが、DuckDB は許さない。
+  グループを一意に決める列（`p.id` で束ねているときの `p.name` など）を GROUP BY に足す。
+  SQLite の結果は変わらない
+- **関数の差**: `strftime` は引数の順が逆。`date` は `YYYY-MM-DD` の文字列なので、
+  `substr(date, 1, 4)` のようにどちらでも同じ意味になる書き方にする
+
 ## total-records.sh
 
 全てのテーブルの合計レコード数を出力するユーティリティ。

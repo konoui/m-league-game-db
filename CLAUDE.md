@@ -25,6 +25,7 @@ hook（`.claude/settings.json`）:
 
 ```bash
 uv run scripts/validate.py [--fix] [queries/<description> ...]  # 検証
+uv run scripts/validate-duckdb.py [queries/<description> ...]  # DuckDB でも実行できるか検証
 uv run scripts/render.py [--check]                              # query-examples/ を生成
 ```
 

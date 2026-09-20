@@ -21,8 +21,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release download --pattern 'database.zip'
-          unzip database.zip
+          gh release download --pattern 'database.zip' --pattern 'duckdb.zip'
+          unzip -o database.zip
+          unzip -o duckdb.zip
 
       - name: Validate queries
         run: uv run scripts/validate.py --db database.sqlite3
+
+      # クエリ例はどちらの配布物でも読めるようにしたいので、DuckDB でも実行できるか見る
+      - name: Validate queries on DuckDB
+        run: uv run scripts/validate-duckdb.py --db database.duckdb
