@@ -6,6 +6,8 @@ M リーグの試合情報を保存した sqlite3 形式のデータベースを
 
 [最新のリリース情報からダウンロードできます。](https://github.com/konoui/m-league-game-db/releases/latest)
 
+### SQLite 版
+
 ダウンロード例
 
 ```bash
@@ -20,7 +22,7 @@ sqlite3 database.sqlite3 "SELECT * FROM player;"
 
 ### DuckDB 版
 
-同じ内容を DuckDB 形式でも配布しています。集計が桁違いに速く、ファイルも小さくなります。
+同じ内容を DuckDB 形式でも配布しています。集計が速く、ファイルも小さくなります。
 テーブル・ビュー・列の名前と内容は SQLite 版と同じなので、クエリ例はそのまま使えます。
 
 ```bash
@@ -33,7 +35,7 @@ curl -L -O https://github.com/konoui/m-league-game-db/releases/latest/download/d
 duckdb database.duckdb "SELECT * FROM player;"
 ```
 
-読み取り専用の配布物のため、主キーと外部キーは付けていません（CHECK 制約は残しています）。
+読み取り専用の配布物のため、主キーと外部キーはありません。
 
 ## テーブル定義
 
