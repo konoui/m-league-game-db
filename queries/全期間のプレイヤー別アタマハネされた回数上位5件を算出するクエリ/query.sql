@@ -18,27 +18,28 @@ WITH ron_agari AS (
     WHERE e.type = 'ron'
 ),
 -- 和了牌が出た時点で聴牌していた和了者以外の他家のうち、その牌でロンあがりできたプレイヤーに絞り込む
--- フリテン中はロンの行がないので、ロンの行があればフリテンでなく役もある
 ron_possible AS (
     SELECT
         ra.event_id,
         ra.kyoku_id,
         ra.winner_player_id,
         ra.target_player_id,
-        ps.player_id,
-        ps.is_reached
+        pts.player_id,
+        pts.is_reached
     FROM ron_agari ra
     -- 和了牌が出たイベントの、打牌者（放銃者）以外の聴牌者の状態を結合する
     JOIN event se ON se.kyoku_id = ra.kyoku_id
         AND se.event_order = ra.source_event_order
-    JOIN player_state ps ON ps.event_id = se.id
-        AND ps.is_actor = 0
-        AND ps.player_id <> ra.winner_player_id
+    JOIN player_tenpai_state pts ON pts.event_id = se.id
+        AND pts.is_actor = 0
+        AND pts.player_id <> ra.winner_player_id
+    -- フリテン中はロンの行がないので、ロンの行があればフリテンでなく役もある。
+    -- この時点のロンの行は河底撈魚・搶槓も含むので、それでしか役が付かない待ちも拾える
     WHERE EXISTS (
         SELECT 1
         FROM tenpai_agari_matrix tam
-        WHERE tam.event_id = ps.event_id
-            AND tam.player_id = ps.player_id
+        WHERE tam.event_id = pts.event_id
+            AND tam.player_id = pts.player_id
             AND tam.is_ron_agari = 1
             AND tam.waiting_tile = ra.agari_tile
     )

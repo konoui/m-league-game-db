@@ -8,7 +8,7 @@
     "まずロンあがりごとに和了牌が出た時点の他家の状態と待ち牌を調べ、次に席の順でアタマハネかを判定し、最後にプレイヤー単位で回数、そのうちリーチ中だった回数、最後に発生した試合日を集計する",
     "回数の多い順に順位を付け、同数は同順位として 5 位以内をすべて出力するため 5 行を超えることがある。並びは順位、最終発生日の新しい順"
   ],
-  "tables": ["agari_event", "event", "player_state", "tenpai_agari_matrix", "kyoku_player_result", "kyoku", "game", "player"],
+  "tables": ["agari_event", "event", "player_tenpai_state", "tenpai_agari_matrix", "kyoku_player_result", "kyoku", "game", "player"],
   "checks": {
     "unique": ["プレイヤー名"],
     "rules": [

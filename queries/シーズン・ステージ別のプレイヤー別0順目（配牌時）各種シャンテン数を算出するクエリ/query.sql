@@ -24,8 +24,6 @@ WITH haipai_shanten AS (
         AND ls.start_year <= pt.left_season_year
     JOIN team t ON pt.team_id = t.id
     WHERE ps.turn_number = 0
-        -- 他家の打牌時点で聴牌している人の行を除き、本人の配牌時点の状態に絞る
-        AND ps.is_actor = 1
 )
 -- 最終結果：シーズン・ステージ・プレイヤー別の平均シャンテン数を算出
 SELECT 
