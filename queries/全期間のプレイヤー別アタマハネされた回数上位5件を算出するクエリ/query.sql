@@ -1,0 +1,88 @@
+-- ロンあがりごとに和了者・放銃者・和了牌と、和了牌が出た打牌（槍槓なら加槓）を特定する（赤ドラは通常の 5 に読み替える）
+WITH ron_agari AS (
+    SELECT
+        ae.event_id,
+        e.kyoku_id,
+        ae.actor_player_id AS winner_player_id,
+        ae.target_player_id,
+        REPLACE(REPLACE(REPLACE(ae.agari_tile, '0m', '5m'), '0p', '5p'), '0s', '5s') AS agari_tile,
+        (
+            SELECT MAX(se.event_order)
+            FROM event se
+            WHERE se.kyoku_id = e.kyoku_id
+                AND se.event_order < e.event_order
+                AND se.type IN ('discard', 'shominkan')
+        ) AS source_event_order
+    FROM agari_event ae
+    JOIN event e ON ae.event_id = e.id
+    WHERE e.type = 'ron'
+),
+-- 和了牌が出た時点で聴牌していた和了者以外の他家のうち、その牌でロンあがりできたプレイヤーに絞り込む
+-- フリテン中はロンの行がないので、ロンの行があればフリテンでなく役もある
+ron_possible AS (
+    SELECT
+        ra.event_id,
+        ra.kyoku_id,
+        ra.winner_player_id,
+        ra.target_player_id,
+        ps.player_id,
+        ps.is_reached
+    FROM ron_agari ra
+    -- 和了牌が出たイベントの、打牌者（放銃者）以外の聴牌者の状態を結合する
+    JOIN event se ON se.kyoku_id = ra.kyoku_id
+        AND se.event_order = ra.source_event_order
+    JOIN player_state ps ON ps.event_id = se.id
+        AND ps.is_actor = 0
+        AND ps.player_id <> ra.winner_player_id
+    WHERE EXISTS (
+        SELECT 1
+        FROM tenpai_agari_matrix tam
+        WHERE tam.event_id = ps.event_id
+            AND tam.player_id = ps.player_id
+            AND tam.is_ron_agari = 1
+            AND tam.waiting_tile = ra.agari_tile
+    )
+),
+-- 放銃者から見た席の距離（下家 1、対面 2、上家 3）が和了者より遠いものをアタマハネとする
+atamahane AS (
+    SELECT
+        rp.event_id,
+        rp.player_id,
+        rp.is_reached,
+        g.date
+    FROM ron_possible rp
+    -- 席の順を判定するための自風の結合
+    JOIN kyoku_player_result self_kpr ON rp.kyoku_id = self_kpr.kyoku_id
+        AND rp.player_id = self_kpr.player_id
+    JOIN kyoku_player_result target_kpr ON rp.kyoku_id = target_kpr.kyoku_id
+        AND rp.target_player_id = target_kpr.player_id
+    JOIN kyoku_player_result winner_kpr ON rp.kyoku_id = winner_kpr.kyoku_id
+        AND rp.winner_player_id = winner_kpr.player_id
+    -- 試合日の結合
+    JOIN kyoku k ON rp.kyoku_id = k.id
+    JOIN game g ON k.game_id = g.id
+    WHERE (CAST(SUBSTR(self_kpr.player_wind, 1, 1) AS INTEGER) - CAST(SUBSTR(target_kpr.player_wind, 1, 1) AS INTEGER) + 4) % 4
+        > (CAST(SUBSTR(winner_kpr.player_wind, 1, 1) AS INTEGER) - CAST(SUBSTR(target_kpr.player_wind, 1, 1) AS INTEGER) + 4) % 4
+),
+-- プレイヤー別にアタマハネされた回数を集計し、順位を付ける
+player_atamahane AS (
+    SELECT
+        p.name AS player_name,
+        COUNT(*) AS atamahane_count,
+        SUM(a.is_reached) AS reached_count,
+        MAX(a.date) AS last_date,
+        RANK() OVER (ORDER BY COUNT(*) DESC) AS count_rank
+    FROM atamahane a
+    JOIN player p ON a.player_id = p.id
+    GROUP BY p.id, p.name
+)
+-- 最終結果: アタマハネされた回数が 5 位以内のプレイヤーを出力（同数は同順位で含める）
+SELECT
+    count_rank AS 順位,
+    player_name AS プレイヤー名,
+    atamahane_count AS アタマハネされた回数,
+    reached_count AS リーチ中の回数,
+    last_date AS 最終発生日
+FROM player_atamahane
+WHERE count_rank <= 5
+ORDER BY count_rank, last_date DESC;
