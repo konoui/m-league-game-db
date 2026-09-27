@@ -46,6 +46,7 @@
   - [tenpai_yaku（聴牌時のあがり役）](#tenpai_yaku聴牌時のあがり役)
   - [foul_play（反則行為・チョンボ）](#foul_play反則行為チョンボ)
 - [集約テーブル（ビュー）](#集約テーブルビュー)
+  - [player_tenpai_waiting_tile（待ち牌ごとの枚数）](#player_tenpai_waiting_tile待ち牌ごとの枚数)
   - [team_season_stage_result（シーズンステージ単位のチームの結果）](#team_season_stage_resultシーズンステージ単位のチームの結果)
   - [player_season_stage_stats_base（シーズンステージ単位のプレイヤーの統計・絶対値）](#player_season_stage_stats_baseシーズンステージ単位のプレイヤーの統計絶対値)
   - [player_season_stage_stats（シーズンステージ単位のプレイヤーの統計）](#player_season_stage_statsシーズンステージ単位のプレイヤーの統計)
@@ -197,12 +198,12 @@
 **主キー**: id
 **外部キー**: kyoku_id -> kyoku.id
 
-| カラム名    | データ型                                                                                              | NULL 許可 | 説明             |
-| ----------- | ----------------------------------------------------------------------------------------------------- | --------- | ---------------- |
-| id          | integer                                                                                               | NO        | イベント ID      |
-| kyoku_id    | integer                                                                                               | NO        | 局 ID            |
-| type        | ENUM(haipai, draw, discard,ron,tsumo,reach,pon,chi,daiminkan,shominkan,ankan,dora_indicator,ryukyoku) | NO        | イベント種別     |
-| event_order | integer                                                                                               | NO        | イベント順序番号 |
+| カラム名    | データ型                                                                                              | NULL 許可 | 説明                                                                                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| id          | integer                                                                                               | NO        | イベント ID                                                                                                                                              |
+| kyoku_id    | integer                                                                                               | NO        | 局 ID                                                                                                                                                    |
+| type        | ENUM(haipai, draw, discard,ron,tsumo,reach,pon,chi,daiminkan,shominkan,ankan,dora_indicator,ryukyoku) | NO        | イベント種別                                                                                                                                             |
+| event_order | integer                                                                                               | NO        | イベント順序番号。風・局・本場・局内の連番を並べた値（東 3 局 1 本場の 39 番目は 1301039）で、同じ試合の中では大小が時間順になる。試合をまたぐと重複する |
 
 ### 各種イベント詳細テーブル
 
@@ -223,13 +224,13 @@
 **主キー**: event_id
 **外部キー**: event_id -> event.id, actor_player_id -> player.id
 
-| カラム名          | データ型  | NULL 許可 | 説明                                                    |
-| ----------------- | --------- | --------- | ------------------------------------------------------- |
-| event_id          | integer   | NO        | イベント ID                                             |
-| actor_player_id   | integer   | NO        | 配牌を受け取ったプレイヤー ID                           |
-| hand              | varchar[] | NO        | 牌ごとの要素を持つ配列                                  |
-| is_tenho_possible | boolean   | NO        | 配牌時に天和チャンスであるか（親でシャンテン数が 0 か） |
-| is_chiho_possible | boolean   | NO        | 配牌時に地和チャンスであるか（子でシャンテン数が 0 か） |
+| カラム名          | データ型  | NULL 許可 | 説明                                                     |
+| ----------------- | --------- | --------- | -------------------------------------------------------- |
+| event_id          | integer   | NO        | イベント ID                                              |
+| actor_player_id   | integer   | NO        | 配牌を受け取ったプレイヤー ID                            |
+| hand              | varchar[] | NO        | 牌ごとの要素を持つ配列。list_contains や unnest が使える |
+| is_tenho_possible | boolean   | NO        | 配牌時に天和チャンスであるか（親でシャンテン数が 0 か）  |
+| is_chiho_possible | boolean   | NO        | 配牌時に地和チャンスであるか（子でシャンテン数が 0 か）  |
 
 #### agari_event（ツモあがり、ロンあがりイベント）
 
@@ -441,14 +442,12 @@
 | ------------------------------ | --------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | event_id                       | integer   | NO        | イベント ID                                                                                                                                  |
 | player_id                      | integer   | NO        | プレイヤー ID                                                                                                                                |
-| hand                           | varchar[] | NO        | 牌ごとの要素を持つ配列                                                                                                                       |
+| hand                           | varchar[] | NO        | 牌ごとの要素を持つ配列。list_contains や unnest が使える                                                                                     |
 | called_blocks                  | varchar   | NO        | 鳴いて晒した牌のブロック（,区切り）。1 面子ずつ引きたいときは player_state_called_block を使う                                               |
 | shanten_count                  | integer   | NO        | シャンテン数（標準形、七対子、国士無双のシャンテン数の内最小の値）                                                                           |
 | standard_type_shanten_count    | integer   | NO        | 標準形のシャンテン数                                                                                                                         |
 | seven_pairs_shanten_count      | integer   | YES       | 七対子のシャンテン数（鳴いている場合 null となる）                                                                                           |
 | thirteen_orphans_shanten_count | integer   | YES       | 国士無双のシャンテン数（鳴いている場合 null となる）                                                                                         |
-| is_reached                     | boolean   | NO        | リーチ状態か                                                                                                                                 |
-| is_furiten                     | boolean   | NO        | フリテン状態か                                                                                                                               |
 | turn_number                    | integer   | NO        | 何巡目のプレイヤーの情報かを表す（プレイヤーの打牌回数）。0 は配牌時の情報                                                                   |
 | call_count                     | integer   | NO        | 鳴いた回数、ただし暗槓を含む                                                                                                                 |
 | furo_count                     | integer   | NO        | 副露数。チー・ポン・大明槓で晒した面子の数で、暗槓は含めず加槓は元のポンのまま数える（集計ビューの furo_count は副露した局数で単位が異なる） |
@@ -473,48 +472,63 @@
 | player_id              | integer   | NO        | プレイヤー ID                                                                                     |
 | block_number           | integer   | NO        | called_blocks の左から何番目の面子か（1 始まり）                                                  |
 | call_type              | varchar   | NO        | 副露の種類（chi, pon, daiminkan, shominkan, ankan）                                               |
-| tiles                  | varchar[] | NO        | 牌ごとの要素を持つ配列                                                                            |
+| tiles                  | varchar[] | NO        | 牌ごとの要素を持つ配列。list_contains や unnest が使える                                          |
 | called_tile            | varchar   | YES       | 他家から受け取った牌。暗槓は null                                                                 |
 | from_relative_position | integer   | YES       | 牌を出した相手の相対位置（1 が下家、2 が対面、3 が上家）。暗槓は null。加槓は元のポンの相手を表す |
 
 ### player_tenpai_state（聴牌時のプレイヤーの状態）
 
 > [!NOTE]
-> event_id よりどのイベント時の状態か確認できる。打牌・配牌に加えて流局時にも記録するが、流局時は手牌が開示される聴牌者のみで、ノーテン者の行は作らない（聴牌かどうかは ryukyoku_player.is_tenpai を参照する）。
+> event_id よりどのイベント時の状態か確認できる。各行はそのイベントの直後の状態を表す。行の意味はイベントの種類（event.type）と is_actor の組み合わせで決まる。
+> - haipai / discard かつ is_actor = true: 本人の配牌・打牌の時点。player_state に同じ (event_id, player_id) の行がある
+> - discard / shominkan かつ is_actor = false: 他家の打牌・加槓の時点で聴牌していたプレイヤー。聴牌していない人の行は作らない。手牌は本人の最後の打牌から変わらないので player_state の行はない。is_furiten はその牌でロンできない状態かを表し、その牌を見逃したことは次のイベントの行に反映される
+> - ryukyoku かつ is_actor = false: 流局時の聴牌者。手牌が開示される聴牌者のみで、ノーテン者の行は作らない（聴牌かどうかは ryukyoku_player.is_tenpai を参照する）
+> 本人の状態だけを見たい場合は is_actor = true で絞る。
 
 **複合主キー**: event_id, player_id
 **外部キー**: event_id -> event.id, player_id -> player.id
 
-| カラム名                  | データ型                                                                       | NULL 許可 | 説明                                                                                                       |
-| ------------------------- | ------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------- |
-| event_id                  | integer                                                                        | NO        | イベント ID                                                                                                |
-| player_id                 | integer                                                                        | NO        | プレイヤー ID                                                                                              |
-| waiting_tiles             | varchar[]                                                                      | NO        | 牌ごとの要素を持つ配列                                                                                     |
-| waiting_type              | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、ノベタン、亜両面、複合形) | NO        | 待ちのタイプ                                                                                               |
-| tile_type_count           | integer                                                                        | NO        | 待ち牌の種類                                                                                               |
-| ideal_tile_count          | integer                                                                        | NO        | 論理的な（平面の）待ち牌の数                                                                               |
-| available_tile_count      | integer                                                                        | NO        | 神目線の待ち牌の数（山に残っている枚数。流局時点では生牌の山が尽きているため、王牌に残っていた枚数を表す） |
-| discarded_tile_count      | integer                                                                        | NO        | 捨て牌にある待ち牌の数                                                                                     |
-| dora_indicator_tile_count | integer                                                                        | NO        | ドラ表示牌にある待ち牌の数                                                                                 |
+| カラム名                  | データ型                                                                       | NULL 許可 | 説明                                                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| event_id                  | integer                                                                        | NO        | イベント ID                                                                                                                                                        |
+| player_id                 | integer                                                                        | NO        | プレイヤー ID                                                                                                                                                      |
+| is_actor                  | boolean                                                                        | NO        | そのイベントの主体（配牌・打牌した人）の行か。他家の打牌・加槓の時点の聴牌者の行と流局時の行は false                                                               |
+| is_reached                | boolean                                                                        | NO        | リーチ状態か                                                                                                                                                       |
+| is_furiten                | boolean                                                                        | NO        | フリテン状態か（ロンできない状態か）。is_discard_furiten・is_temporary_furiten・is_reach_furiten のいずれかが true なら true                                       |
+| is_discard_furiten        | boolean                                                                        | NO        | 自分の捨て牌に待ち牌がある（捨て牌フリテン）。待ちが変わると解除される                                                                                             |
+| is_temporary_furiten      | boolean                                                                        | NO        | リーチ前に、役があってロンできる牌を見逃した（同巡内フリテン）。自分の次の打牌で解除されるため、打牌者の行では常に false。役がなく和了できない牌の見逃しは含めない |
+| is_reach_furiten          | boolean                                                                        | NO        | リーチ後に、役があってロンできる牌を見逃した。局の終わりまで続く                                                                                                   |
+| waiting_tiles             | varchar[]                                                                      | NO        | 牌ごとの要素を持つ配列。list_contains や unnest が使える                                                                                                           |
+| waiting_type              | ENUM(単騎、シャンポン、両面、カンチャン、ペンチャン、ノベタン、亜両面、複合形) | NO        | 待ちのタイプ                                                                                                                                                       |
+| tile_type_count           | integer                                                                        | NO        | 待ち牌の種類                                                                                                                                                       |
+| ideal_tile_count          | integer                                                                        | NO        | 論理的な（平面の）待ち牌の数                                                                                                                                       |
+| available_tile_count      | integer                                                                        | NO        | 神目線の待ち牌の数（山に残っている枚数。流局時点では生牌の山が尽きているため、王牌に残っていた枚数を表す）                                                         |
+| discarded_tile_count      | integer                                                                        | NO        | 捨て牌にある待ち牌の数                                                                                                                                             |
+| dora_indicator_tile_count | integer                                                                        | NO        | ドラ表示牌にある待ち牌の数                                                                                                                                         |
 
 ### tenpai_agari_matrix（聴牌時のあがり可能性マトリックス）
 
 > [!NOTE]
-> 聴牌時のイベントに対して、各待ち牌ごとのロン・ツモあがりおよび役の可能性を記録する。役がつかず和了できない牌は行を作らないため、あがれる牌かどうかは行の有無で判定する。含めるのは「その牌で和了した時点で確定する役」だけで、立直・ダブル立直・ドラ・赤ドラ・カンドラは含め、和了の時点に依存する。一発・海底摸月・河底撈魚・嶺上開花・槍槓と、局中は不可知な裏ドラは含めない。
-> 各行は (event_id, player_id) で player_tenpai_state の 1 行に対応する。player_tenpai_state と結合するときは event_id と player_id の両方で結合する。
-> 流局後は和了し得ないため流局イベントには作らない。流局時の聴牌者の待ち牌ごとの打点を調べる場合は、流局イベントと同じ kyoku_id で、そのプレイヤー（discard_event.actor_player_id）の event_order が最大の打牌イベントを探し、その event.id と player_id で結合する。流局時の手牌は最後の打牌後の手牌と同じなので待ち牌は一致する。ただし available_tile_count は打牌時点の値で、最後の打牌より後に増えたカンドラは反映されていない。
+> 聴牌時の各待ち牌について、ロン・ツモそれぞれで和了できる場合に行を持つ。行があれば、その時点でその牌で和了できる（役がない牌と、フリテン中（player_tenpai_state.is_furiten）のロンは行を作らない）。
+> 役はその時点で確定するものだけを含める。立直・ダブル立直・ドラ・赤ドラ・カンドラは常に含む。河底撈魚・搶槓は、他家の打牌・加槓の時点の行（player_tenpai_state.is_actor = false）のロンの行にだけ含む（搶槓は加えた牌の行だけ）。一発・海底摸月・嶺上開花・裏ドラは含まない。
+> 枚数の列はその待ち牌についての値で、ロンとツモの行に同じ値が入る。合計するときは、重複を避けるため DISTINCT を使う。役がつかない牌の行はないため、待ち牌すべての合計は player_tenpai_state を見る。
+> player_tenpai_state とは event_id と player_id の両方で結合する。
+> 流局イベントの行は「流局しなければ和了できた牌」を表す（和了の時点で付く役は付かない）。流局時の聴牌者の打点はこの行から引ける。
 
 **主キー**: id
-**外部キー**: (event_id, player_id) -> player_tenpai_state(event_id, player_id)
+**外部キー**: (event_id, player_id) -> player_tenpai_state.(event_id, player_id)
 
-| カラム名             | データ型 | NULL 許可 | 説明                                         |
-| -------------------- | -------- | --------- | -------------------------------------------- |
-| id                   | integer  | NO        | ID                                           |
-| event_id             | integer  | NO        | 聴牌時のイベント ID（配牌・打牌イベント）    |
-| player_id            | integer  | NO        | 聴牌しているプレイヤー ID                    |
-| waiting_tile         | varchar  | NO        | 待ち牌                                       |
-| available_tile_count | integer  | NO        | あがれる牌の残り枚数（神目線）               |
-| is_ron_agari         | boolean  | NO        | ロンあがり想定か（false はツモあがりを表す） |
+| カラム名                  | データ型 | NULL 許可 | 説明                                                                                                                                  |
+| ------------------------- | -------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| id                        | integer  | NO        | ID                                                                                                                                    |
+| event_id                  | integer  | NO        | その聴牌状態を記録したイベント ID（配牌・打牌・加槓）。他家の打牌・加槓の時点の行もあるため、そのプレイヤー自身のイベントとは限らない |
+| player_id                 | integer  | NO        | 聴牌しているプレイヤー ID                                                                                                             |
+| waiting_tile              | varchar  | NO        | 待ち牌                                                                                                                                |
+| available_tile_count      | integer  | NO        | その待ち牌の残り枚数（神目線）。ロン・ツモの行に同じ値が入る                                                                          |
+| ideal_tile_count          | integer  | NO        | その待ち牌の理論上の枚数（4 から自分の手牌にある枚数を引いた値）                                                                      |
+| discarded_tile_count      | integer  | NO        | その待ち牌が捨て牌（全員の河）にある枚数                                                                                              |
+| dora_indicator_tile_count | integer  | NO        | その待ち牌がドラ表示牌として見えている枚数                                                                                            |
+| is_ron_agari              | boolean  | NO        | ロンあがり想定か（false はツモあがりを表す）                                                                                          |
 
 ### tenpai_yaku（聴牌時のあがり役）
 
@@ -547,20 +561,44 @@
 
 ## 集約テーブル（ビュー）
 
+### player_tenpai_waiting_tile（待ち牌ごとの枚数）
+
+> [!NOTE]
+> ビュー。tenpai_agari_matrix を待ち牌ごとの 1 行にしたもの。matrix はロンとツモで行が分かれるが枚数はどちらも同じ値なので、重複を除いてある。
+> 役がつかない牌は matrix に行がないためこのビューにも現れない。待ち牌すべての合計は total_ の列（player_tenpai_state の値）を見る。
+
+**複合主キー**: event_id, player_id, waiting_tile
+**外部キー**: (event_id, player_id) -> player_tenpai_state.(event_id, player_id)
+
+| カラム名                        | データ型 | NULL 許可 | 説明                                                             |
+| ------------------------------- | -------- | --------- | ---------------------------------------------------------------- |
+| event_id                        | integer  | NO        | イベント ID                                                      |
+| player_id                       | integer  | NO        | 聴牌しているプレイヤー ID                                        |
+| waiting_tile                    | varchar  | NO        | 待ち牌                                                           |
+| available_tile_count            | integer  | NO        | その待ち牌の残り枚数（神目線）                                   |
+| ideal_tile_count                | integer  | NO        | その待ち牌の理論上の枚数（4 から自分の手牌にある枚数を引いた値） |
+| discarded_tile_count            | integer  | NO        | その待ち牌が捨て牌（全員の河）にある枚数                         |
+| dora_indicator_tile_count       | integer  | NO        | その待ち牌がドラ表示牌として見えている枚数                       |
+| total_tile_type_count           | integer  | NO        | 待ち牌の種類数（役がつかない牌も含む）                           |
+| total_available_tile_count      | integer  | NO        | 待ち牌すべての残り枚数の合計（役がつかない牌も含む）             |
+| total_ideal_tile_count          | integer  | NO        | 待ち牌すべての理論上の枚数の合計                                 |
+| total_discarded_tile_count      | integer  | NO        | 待ち牌すべての捨て牌にある枚数の合計                             |
+| total_dora_indicator_tile_count | integer  | NO        | 待ち牌すべてのドラ表示牌として見えている枚数の合計               |
+
 ### team_season_stage_result（シーズンステージ単位のチームの結果）
 
 > [!NOTE]
 > ビュー
 
-| カラム名            | データ型                        | NULL 許可 | 説明                                                                                                                                                                       |
-| ------------------- | ------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| team_id             | integer                         | NO        | ID                                                                                                                                                                         |
-| team_name           | varchar                         | NO        | チーム名                                                                                                                                                                   |
-| season_start_year   | integer                         | NO        | シーズンの開始年度                                                                                                                                                         |
-| season_end_year     | integer                         | NO        | シーズンの終了年度                                                                                                                                                         |
-| stage               | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                                                                                               |
-| stage_league_points | numeric                         | NO        | チームごとの順位点を加味した pt（そのステージ分のみ。小数第 1 位で丸め済み）                                                                                               |
-| final_league_points | numeric                         | NO        | stage_league_points に regular, semifinal からの持ち越しポイントを加算した値。この値を使用して優勝を決定する（持ち越しで 0.025pt 単位になりうるため小数第 3 位で丸め済み） |
+| カラム名            | データ型                        | NULL 許可 | 説明                                                                                                                                                                                                                                                                                                                              |
+| ------------------- | ------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| team_id             | integer                         | NO        | ID                                                                                                                                                                                                                                                                                                                                |
+| team_name           | varchar                         | NO        | チーム名                                                                                                                                                                                                                                                                                                                          |
+| season_start_year   | integer                         | NO        | シーズンの開始年度                                                                                                                                                                                                                                                                                                                |
+| season_end_year     | integer                         | NO        | シーズンの終了年度                                                                                                                                                                                                                                                                                                                |
+| stage               | ENUM(regular, semifinal, final) | NO        | シーズン種別                                                                                                                                                                                                                                                                                                                      |
+| stage_league_points | numeric                         | NO        | チームごとの順位点を加味した pt（そのステージ分のみ。小数第 1 位で丸め済み）                                                                                                                                                                                                                                                      |
+| final_league_points | numeric                         | NO        | stage_league_points に regular, semifinal からの持ち越しポイントを加算した値。semifinal はレギュラーの半分、final はセミファイナルまでの合計の半分を持ち越す（セミファイナルがない 2018-19 は、final にレギュラーの半分を持ち越す）。この値を使用して優勝を決定する（持ち越しで 0.025pt 単位になりうるため小数第 3 位で丸め済み） |
 
 ### player_season_stage_stats_base（シーズンステージ単位のプレイヤーの統計・絶対値）
 
