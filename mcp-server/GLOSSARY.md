@@ -1,0 +1,22 @@
+# 麻雀・M リーグ用語集（DB への対応づけ）
+
+- 着順: game_player_result.rank（1〜4）。1着 = トップ。
+- 連対: 1着または2着。逆連対: 3着または4着。
+- ポイント: game_player_result.league_points。ペナルティは penalty_league_points に別記録。合計は ROUND(..., 1)。
+- 素点・スコア: game_player_result.score（試合終了時の持ち点）。
+- 所属チーム: その試合時点のチームは game_player_result.team_id。局やイベント単位でチームが要るときは kyoku → game_player_result を (game_id, player_id) で結合する。
+- 親・子: kyoku.oya_player_id が親。それ以外が子。
+- 和了（あがり）: agari_event（event_id で event と結合）。ツモかロンかは event.type（'tsumo' / 'ron'）。和了者は agari_event.actor_player_id、ロンの放銃者は target_player_id。翻数 han・符 fu・打点 agari_points、役満は is_yakuman = 1。
+- 放銃: 他家のロン和了で振り込むこと。event.type = 'ron' の agari_event.target_player_id が放銃者。
+- 被ツモ: 他家にツモ和了されること（event.type = 'tsumo' で、和了者以外の 3 人）。
+- 打点の区分: 満貫 = 5翻（4翻40符・3翻70符以上も満貫）、跳満 = 6〜7翻、倍満 = 8〜10翻、三倍満 = 11翻以上（M リーグは数え役満なし。13翻以上でも役満でなければ三倍満）。役満は必ず agari_event.is_yakuman = 1 で判定し、han では判定しない。
+- リーチ: reach_event。is_accepted = 1 が成立したリーチ。宣言牌で放銃すると不成立（is_accepted = 0）。「リーチ回数」はどちらを数えるか曖昧なので、解釈に明記する。
+- 先制リーチ: その局で最初に宣言されたリーチ。event の順序（event_order）で判定する。
+- 聴牌（テンパイ）: player_tenpai_state（聴牌した時点ごとの状態）。流局時の聴牌・ノーテンは ryukyoku_player.is_tenpai。
+- シャンテン数: player_state.shanten_count（巡目は turn_number）。0 = 聴牌。
+- 頭ハネ: M リーグはダブロンなし。同じ牌で複数人がロンできるとき、放銃者から見て手番が最も近い人（下家 → 対面 → 上家の順）だけが和了する。和了できなかった人は「頭ハネされた」。
+- 連続記録（連続1着・連続連対・連続放銃など）: 時系列に並べて条件が途切れるまでの長さ。ウィンドウ関数で「条件を満たさない行が出るたびに番号を進める」gaps-and-islands で求める。途切れの単位（試合をまたぐか、シーズンで区切るか）を解釈に明記する。
+- シーズン: league_season.start_year（2024-25 シーズンは 2024）。ステージは season_stage.stage（regular / semifinal / final）。
+- 暦年: game.date の年。シーズンとは別物。
+- 役ごとの翻数（ドラ・裏ドラ・赤ドラを含む）: agari_yaku（agari_event_id, yaku_name_id, han）と yaku_name を結合する。裏ドラ 3 = 役名が裏ドラの行の han = 3。
+- イベントの種別: event.type は chi / pon / ankan / daiminkan / shominkan / reach / ron / tsumo / ryukyoku / discard / draw / haipai / dora_indicator。
