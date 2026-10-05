@@ -11,7 +11,7 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 
 - `references/query-format.md`: ファイル形式・命名・品質基準。**作成前に必ず読む**
 - `references/analysis-perspectives.md`: 指標の定義と分析観点
-- `TABLE.sqlite3.md`: テーブル定義。スキーマは `sqlite3 -readonly database.sqlite3 ".schema <table>"` でも確認できる
+- `TABLE.sqlite3.md`: テーブル定義。各テーブルの注記（`>` で始まる行）に列の使い分けが書いてあるので、使うテーブルの分は必ず読む。スキーマは `sqlite3 -readonly database.sqlite3 ".schema <table>"` でも確認できる
 - `PAI_FORMAT.md`（牌の表し方）、`YAKU_NAMES.md`（役名）、`MLEAGUE.md`（M リーグの情報。あれば読む）
 - 既存の `queries/*/`: 同じ結合・集計パターンを探す手本
 
@@ -27,7 +27,7 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 
 - `ls queries/` と `grep -l <キーワード> queries/*/meta.json` で類似クエリを探す
 - 同じ内容のクエリがあれば、新しく作らずにユーザーへ報告する
-- 類似クエリがあれば、その結合方法・チーム所属の絞り込み・並び順を踏襲する
+- 類似クエリがあれば、その結合方法・並び順を踏襲する
 
 ### 3. 計画を立て、承認を得る
 
@@ -79,10 +79,12 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 
 ```bash
 uv run scripts/validate.py --fix queries/<description>
+uv run scripts/validate-duckdb.py queries/<description>
 ```
 
 - `--fix` は `tables` を実際の参照テーブルに合わせて書き換える
 - PASS するまで修正を繰り返す
+- `validate-duckdb.py` は DuckDB 版でも実行できるかを確かめる
 - `checks` の違反は、まず SQL の誤りを疑う。ルールを緩めるのは、ルール自体がドメイン上誤っていると説明できる場合だけにする
 
 `checks` で検出できるのは、書いた性質が破れる誤りだけ。**結果が正しいかは自分でも確かめる**:
@@ -93,7 +95,11 @@ sqlite3 -readonly -header -column database.sqlite3 < "queries/<description>/quer
 
 - 件数・値の範囲が常識的か（例: 率が 0〜100 に収まる、試合数がシーズンの総試合数を超えない）
 - JOIN で行が重複して、回数が水増しされていないか
-- 可能なら別の方法で集計した値と突き合わせる
+- 別の方法で集計した値と突き合わせる。一致を `checks` のルールにできるなら入れる
+- 順序に意味がある処理（連続記録など）は、代表的な 1 件分を元のデータで並べ、並び順が意図どおりか確かめる
+- `unique` の列の組が、件数を絞る前の元のデータでも一意か確かめる
+- 件数を絞る場合は、絞る位置に同数の行が何件あるかを確かめ、同数の場合の順序が plan の説明どおりか見る
+- クエリをわざと壊し（並び順や条件を変える）、`checks` が違反を検出するか確かめる。検出しなければ、その誤りで破れるルールを足す
 
 ### 6. 公開用 Markdown を生成する
 

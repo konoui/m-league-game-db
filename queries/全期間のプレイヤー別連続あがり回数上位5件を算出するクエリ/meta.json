@@ -14,8 +14,8 @@
     "game",
     "season_stage",
     "league_season",
-    "player_team",
-    "team"
+    "team",
+    "game_player_result"
   ],
   "checks": {
     "unique": [

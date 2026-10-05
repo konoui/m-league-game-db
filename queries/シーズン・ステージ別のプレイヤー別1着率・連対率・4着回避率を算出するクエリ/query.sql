@@ -1,0 +1,19 @@
+-- 最終結果: 集計済みのシーズン・ステージ別成績から、着順ごとの回数と率を出力
+SELECT
+    season_start_year || '-' || (season_start_year + 1) AS シーズン,
+    stage AS ステージ,
+    player_name AS プレイヤー名,
+    team_name AS チーム名,
+    total_game_count AS 試合数,
+    -- 着順ごとの回数
+    rank1_count AS "1着回数",
+    rank2_count AS "2着回数",
+    rank3_count AS "3着回数",
+    rank4_count AS "4着回数",
+    -- 試合数に対する割合
+    ROUND(top_per_game_percent, 2) AS "1着率",
+    ROUND(top2_per_game_percent, 2) AS 連対率,
+    ROUND(avoid_last_per_game_percent, 2) AS "4着回避率",
+    ROUND(league_points_total, 1) AS ポイント
+FROM player_season_stage_stats
+ORDER BY season_start_year DESC, stage, top_per_game_percent DESC, player_name;

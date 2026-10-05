@@ -14,13 +14,13 @@
     "event",
     "reach_event",
     "player",
-    "player_team",
-    "team"
+    "team",
+    "game_player_result"
   ],
   "checks": {
     "unique": [
       "試合日",
-      "試合番号",
+      "ラウンド番号",
       "プレイヤー名"
     ],
     "rows": {

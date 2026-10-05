@@ -22,9 +22,9 @@
     "season_stage",
     "league_season",
     "player",
-    "player_team",
     "team",
-    "tenpai_yaku"
+    "tenpai_yaku",
+    "game_player_result"
   ],
   "checks": {
     "unique": [

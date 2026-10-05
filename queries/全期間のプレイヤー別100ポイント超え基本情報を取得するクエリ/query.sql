@@ -13,9 +13,6 @@
      JOIN league_season ls ON ss.league_season_id = ls.id
      -- プレイヤー・チーム情報の結合
      JOIN player p ON gpr.player_id = p.id
-     JOIN player_team pt ON p.id = pt.player_id 
-         AND ls.start_year >= pt.joined_season_year 
-         AND ls.start_year <= pt.left_season_year
-     JOIN team t ON pt.team_id = t.id
+     JOIN team t ON gpr.team_id = t.id
      WHERE gpr.league_points > 100
      ORDER BY gpr.league_points DESC, ls.start_year, g.date, p.name;

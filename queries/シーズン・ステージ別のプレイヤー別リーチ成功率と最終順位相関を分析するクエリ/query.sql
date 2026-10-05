@@ -22,10 +22,8 @@ WITH reach_stats AS (
   JOIN reach_event re ON e.id = re.event_id
   -- プレイヤー・チーム情報の結合
   JOIN player p ON re.actor_player_id = p.id
-  JOIN player_team pt ON p.id = pt.player_id 
-    AND ls.start_year >= pt.joined_season_year 
-    AND ls.start_year <= pt.left_season_year
-  JOIN team t ON pt.team_id = t.id
+  JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
+  JOIN team t ON gpr.team_id = t.id
   GROUP BY ls.start_year, ss.stage, p.id, p.name, t.name
 ),
 -- シーズン・ステージ別のプレイヤー別順位統計を集計する

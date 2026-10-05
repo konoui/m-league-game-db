@@ -111,10 +111,8 @@ JOIN player p ON mc.player_id = p.id
 JOIN game g ON mc.game_id = g.id
 JOIN season_stage ss ON g.season_stage_id = ss.id
 JOIN league_season ls ON ss.league_season_id = ls.id
--- チーム所属情報の結合
-JOIN player_team pt ON p.id = pt.player_id
-    AND ls.start_year >= pt.joined_season_year
-    AND ls.start_year <= pt.left_season_year
-JOIN team t ON pt.team_id = t.id
+-- 試合時点の所属チームの結合
+JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
+JOIN team t ON gpr.team_id = t.id
 ORDER BY mc.max_consecutive_minus DESC, ls.start_year DESC, g.date DESC
 LIMIT 10;

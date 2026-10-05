@@ -13,7 +13,6 @@
     "game",
     "season_stage",
     "league_season",
-    "player_team",
     "team"
   ],
   "checks": {

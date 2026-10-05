@@ -16,7 +16,6 @@
     "event",
     "reach_event",
     "player",
-    "player_team",
     "team",
     "game_player_result"
   ],

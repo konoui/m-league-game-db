@@ -19,10 +19,8 @@ WITH turn7_shanten AS (
     JOIN league_season ls ON ss.league_season_id = ls.id
     -- プレイヤー・チーム情報の結合
     JOIN player p ON ps.player_id = p.id
-    JOIN player_team pt ON p.id = pt.player_id 
-        AND ls.start_year >= pt.joined_season_year 
-        AND ls.start_year <= pt.left_season_year
-    JOIN team t ON pt.team_id = t.id
+    JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
+    JOIN team t ON gpr.team_id = t.id
     WHERE ps.turn_number = 7
 )
 -- シーズン・ステージ・プレイヤー別の各種シャンテン数統計を算出

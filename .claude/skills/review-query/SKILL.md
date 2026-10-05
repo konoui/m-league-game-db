@@ -11,7 +11,7 @@ description: queries/ の既存 SQL クエリ例をレビューし、命名・pl
 
 - `../create-query/references/query-format.md`: 形式・命名・品質基準
 - `../create-query/references/analysis-perspectives.md`: 指標の定義
-- `TABLE.sqlite3.md`: テーブル定義
+- `TABLE.sqlite3.md`: テーブル定義。各テーブルの注記（`>` で始まる行）に列の使い分けが書いてある
 
 ## 手順
 
@@ -44,17 +44,21 @@ FAIL があれば先に直す。`tables` の不一致は `--fix` で直る。
 
 - 指標の定義が `analysis-perspectives.md` や一般的な麻雀の定義と合っているか
 - JOIN による行の重複で集計が水増しされていないか
+- テーブルや列の使い方が `TABLE.sqlite3.md` の注記に沿っているか
+- 順序に意味がある処理（連続記録、何番目か、直前との比較）で、並び順に使う列が実際にその順序を表しているか。区分を表す文字列で並べていないか
+- 件数を絞るとき、同数の場合の順序が決まっているか。絞り込みの並び順・最終結果の並び順・plan の説明が一致しているか
 - 出力カラムの別名が値の意味と合っているか（例: 4着率に「ラス回避率」と付けていないか）
 - 計算しているのに出力していない、不要な処理がないか
 - CTE・JOIN 群・カラム群に、意図を説明する `-- ` コメントがあるか
 
 **checks**
 
-- `unique` が description の「〜別」の粒度と一致しているか
+- `unique` が description の「〜別」の粒度と一致しているか。その列の組が、件数を絞る前の元のデータでも一意か
+- 中心となる集計が誤ったら破れるルールがあるか。値域と形式のルールだけになっていないか
 - 率・平均順位などの値域、部分 ≤ 全体、内訳の合計 = 全体といった、書ける性質が抜けていないか
 - 現在のデータに合わせただけで、ドメイン上の根拠がないルールになっていないか（例: 実測の最大値をそのまま上限にしている）
 
-疑わしい点は `sqlite3 -readonly -header -column database.sqlite3` で実際に値を確かめてから判断する。
+疑わしい点は `sqlite3 -readonly -header -column database.sqlite3` で実際に値を確かめてから判断する。数え方が正しいかは、代表的な 1 件分を元のデータで並べて数え直すか、別の方法で集計した値と突き合わせて確かめる。
 
 ### 3. 修正する
 
@@ -66,6 +70,7 @@ FAIL があれば先に直す。`tables` の不一致は `--fix` で直る。
 
 ```bash
 uv run scripts/validate.py --fix queries/<description>
+uv run scripts/validate-duckdb.py queries/<description>
 uv run scripts/render.py
 ```
 

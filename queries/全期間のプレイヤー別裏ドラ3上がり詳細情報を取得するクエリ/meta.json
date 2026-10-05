@@ -16,9 +16,9 @@
     "agari_event",
     "yaku_name",
     "player",
-    "player_team",
     "team",
-    "agari_yaku"
+    "agari_yaku",
+    "game_player_result"
   ],
   "checks": {
     "unique": [

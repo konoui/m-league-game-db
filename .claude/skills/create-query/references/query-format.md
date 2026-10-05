@@ -26,7 +26,7 @@ queries/<description>/
     "まず局単位でリーチの順番を求め、次にシーズン・ステージ・プレイヤー単位で集計する",
     "結果はシーズン降順、ステージ順、先制リーチ率の降順で並べる"
   ],
-  "tables": ["reach_event", "event", "player", "kyoku", "game", "season_stage", "league_season", "player_team", "team"],
+  "tables": ["reach_event", "event", "player", "kyoku", "game", "season_stage", "league_season", "game_player_result", "team"],
   "checks": {
     "unique": ["シーズン", "ステージ", "プレイヤー名"],
     "rules": ["先制リーチ回数 BETWEEN 0 AND リーチ回数", "先制リーチ率 BETWEEN 0 AND 100"]
@@ -107,11 +107,12 @@ SQL が参照するテーブル・ビューを列挙する。`uv run scripts/val
 
 **現在のデータからではなく、ドメイン上必ず成り立つ性質を書く。** DB が更新されても成り立ち、クエリの誤りで破れる条件がよい。
 
-- **粒度**: `unique` は description の「〜別」と一致させる。JOIN の条件漏れ（チーム所属のシーズン条件など）で行が増えると検出できる
+- **粒度**: `unique` は description の「〜別」と一致させる。結合で行が増える誤りを検出できる。`unique` に書く列の組が、件数を絞った結果だけでなく元のデータでも一意か、重複を数えるクエリで確かめる
 - **値域**: 率は `BETWEEN 0 AND 100`、平均順位は `BETWEEN 1 AND 4`、回数は `>= 0`
 - **包含関係**: 部分の回数 ≤ 全体の回数（例: `先制リーチ回数 <= リーチ回数`、`first_place_count <= rentai_count`）
 - **合計の整合**: 内訳の合計 = 全体（例: `一着回数 + 二着回数 + 三着回数 + 四着回数 = 総ゲーム数`）。丸めた値は `ABS(... - 100) <= 0.1` のように誤差を許す
 - **導出の整合**: 別カラムから再計算した値と一致する（例: `記録終了局順 - 記録開始局順 + 1 = 連続あがり回数`）
+- **数え直しとの一致**: 中心となる集計が誤ると破れるルールを、少なくとも 1 つ入れる。値域や形式のルールだけでは、数え方の誤りを検出できない。別の方法で数え直した値を出力に加え、一致を条件にする（例: `期間内出場試合数 = 連続1着回避回数`）
 - **形式**: `シーズン GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'`、日付の `GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`
 
 注意:
@@ -125,9 +126,12 @@ SQL が参照するテーブル・ビューを列挙する。`uv run scripts/val
 - 1 ファイル 1 文で、読み取り専用（SELECT / WITH のみ）(validate)
 - 末尾に `;` を付ける (validate)
 - 結果が 1 行以上返る (validate)
-- テーブル名・カラム名は `TABLE.sqlite3.md` に従う
+- テーブル名・カラム名は `TABLE.sqlite3.md` に従う。テーブルや列の使い分け（所属チームの引き方など）は、該当テーブルの注記（`>` で始まる行）を読んで従う
+- SQLite と DuckDB の両方で動く書き方にする。どちらか一方にしかない関数や構文は使わない
 - 出力カラムの別名はなるべく日本語にする（例: `AS プレイヤー名`）
-- シーズンは `start_year` を使う。所属チームは `player_team` の `joined_season_year` 〜 `left_season_year` の範囲で絞り込む
+- シーズンは `start_year` を使う
+- 順序に意味がある処理（連続記録、何番目か、直前との比較）では、並び順に使う列が実際にその順序を表しているか確かめる。区分を表す文字列（ステージ名など）は文字列順に並ぶため、時系列の並び順に入れない
+- 件数を絞るときは、同数の場合の順序まで決める。絞り込みの並び順、最終結果の並び順、plan の説明を一致させる
 
 ### コメント
 
@@ -165,11 +169,9 @@ player_reach_stats AS (
     JOIN game g ON k.game_id = g.id
     JOIN season_stage ss ON g.season_stage_id = ss.id
     JOIN league_season ls ON ss.league_season_id = ls.id
-    -- チーム所属情報の結合
-    JOIN player_team pt ON p.id = pt.player_id
-        AND ls.start_year >= pt.joined_season_year
-        AND ls.start_year <= pt.left_season_year
-    JOIN team t ON pt.team_id = t.id
+    -- 試合時点の所属チームの結合
+    JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
+    JOIN team t ON gpr.team_id = t.id
     GROUP BY ls.start_year, ss.stage, p.id, t.name
 )
 -- 最終結果: 先制リーチ率を算出して出力

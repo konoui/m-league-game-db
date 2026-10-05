@@ -19,9 +19,9 @@
     "game",
     "season_stage",
     "league_season",
-    "player_team",
     "team",
-    "ryukyoku_player"
+    "ryukyoku_player",
+    "game_player_result"
   ],
   "checks": {
     "unique": [

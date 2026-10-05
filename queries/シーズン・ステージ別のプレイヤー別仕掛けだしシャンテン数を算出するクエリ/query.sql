@@ -31,11 +31,9 @@ player_first_furo_stats AS (
     JOIN game g ON k.game_id = g.id
     JOIN season_stage ss ON g.season_stage_id = ss.id
     JOIN league_season ls ON ss.league_season_id = ls.id
-    -- チーム所属情報の結合
-    JOIN player_team pt ON p.id = pt.player_id
-        AND ls.start_year >= pt.joined_season_year
-        AND ls.start_year <= pt.left_season_year
-    JOIN team t ON pt.team_id = t.id
+    -- 試合時点の所属チームの結合
+    JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
+    JOIN team t ON gpr.team_id = t.id
     GROUP BY ls.start_year, ss.stage, p.id, p.name, t.name
 )
 -- 最終結果: 平均仕掛けだしシャンテン数とシャンテン数ごとの割合を出力する
