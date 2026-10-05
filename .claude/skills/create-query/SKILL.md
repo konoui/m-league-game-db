@@ -73,18 +73,18 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 2. `queries/<description>/meta.json` を書く。`tables` は空配列のままにせず、分かる範囲で書いておく
 3. `checks` を書く。`PLAN.md` の「結果の不変条件」を条件式にする。結果を見てから合わせにいくのではなく、SQL を実行する前に書く
 
-`meta.json` があるクエリのファイルを保存するたびに、PostToolUse hook が `scripts/validate.py` を実行する。エラーが返ってきたら修正する。作業を終えるときは Stop hook が、変更したクエリの検証と `query-examples/` の生成漏れを確認する。
+`meta.json` があるクエリのファイルを保存するたびに、PostToolUse hook が `scripts/validate.py check` を実行する。エラーが返ってきたら修正する。作業を終えるときは Stop hook が、変更したクエリの検証と `query-examples/` の生成漏れを確認する。
 
 ### 5. 検証する
 
 ```bash
-uv run scripts/validate.py --fix queries/<description>
-uv run scripts/validate-duckdb.py queries/<description>
+uv run scripts/validate.py check --fix queries/<description>
 ```
 
+- SQLite 版と DuckDB 版の両方で実行し、形式と `checks` を検査する
 - `--fix` は `tables` を実際の参照テーブルに合わせて書き換える
 - PASS するまで修正を繰り返す
-- `validate-duckdb.py` は DuckDB 版でも実行できるかを確かめる
+- この時点では `result.json` がまだないので、「result.json 未作成」と表示される（手順 6 で作る）
 - `checks` の違反は、まず SQL の誤りを疑う。ルールを緩めるのは、ルール自体がドメイン上誤っていると説明できる場合だけにする
 
 `checks` で検出できるのは、書いた性質が破れる誤りだけ。**結果が正しいかは自分でも確かめる**:
@@ -104,11 +104,11 @@ sqlite3 -readonly -header -column database.sqlite3 < "queries/<description>/quer
 ### 6. 実行結果を保存し、公開用 Markdown を生成する
 
 ```bash
-uv run scripts/snapshot.py --update queries/<description>
+uv run scripts/validate.py update-result queries/<description>
 uv run scripts/render.py
 ```
 
-`snapshot.py --update` は、最新のリリースの DB（DuckDB 版）での実行結果とその版を `result.json` に保存する。
+`update-result` は、最新のリリースの DB（DuckDB 版）での実行結果とその版を `result.json` に保存する。
 
 `query-examples/<description>.md` と `query-examples/README.md` が更新される。
 

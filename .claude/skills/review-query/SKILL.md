@@ -5,7 +5,7 @@ description: queries/ の既存 SQL クエリ例をレビューし、命名・pl
 
 # クエリレビュー
 
-`scripts/validate.py` が検査できない、意味レベルの問題を見つけて直す。
+`scripts/validate.py check` が検査できない、意味レベルの問題を見つけて直す。
 
 ## 参照するもの
 
@@ -20,7 +20,7 @@ description: queries/ の既存 SQL クエリ例をレビューし、命名・pl
 対象が指定されていなければ、全件を対象にする。
 
 ```bash
-uv run scripts/validate.py [queries/<description> ...]
+uv run scripts/validate.py check [queries/<description> ...]
 ```
 
 FAIL があれば先に直す。`tables` の不一致は `--fix` で直る。
@@ -69,13 +69,11 @@ FAIL があれば先に直す。`tables` の不一致は `--fix` で直る。
 修正後に次を実行する。
 
 ```bash
-uv run scripts/validate.py --fix queries/<description>
-uv run scripts/validate-duckdb.py queries/<description>
-uv run scripts/snapshot.py queries/<description>
+uv run scripts/validate.py check --fix queries/<description>
 uv run scripts/render.py
 ```
 
-`snapshot.py` が不一致を出したら、表示された差分が意図した変更かを確かめる。書き換えのつもり（結果を変えない修正）で差分が出たら、修正が誤っている。意図した変更なら `uv run scripts/snapshot.py --update queries/<description>` で `result.json` を作り直し、差分をユーザーに示す。
+`check` が `result.json` との不一致を出したら、表示された差分が意図した変更かを確かめる。書き換えのつもり（結果を変えない修正）で差分が出たら、修正が誤っている。意図した変更なら `uv run scripts/validate.py update-result queries/<description>` で `result.json` を作り直し、差分をユーザーに示す。
 
 ### 4. 報告する
 

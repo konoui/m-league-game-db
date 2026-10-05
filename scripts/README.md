@@ -2,28 +2,57 @@
 
 ## validate.py
 
-`queries/<description>/` の `query.sql` と `meta.json` を検証する。
+`queries/<description>/` のクエリ例を検証する。
 
 ```bash
-# 全件（database.sqlite3 で SQL も実行する）
-uv run scripts/validate.py
+# 全件を検査する
+uv run scripts/validate.py check
 
 # 指定したクエリのみ。--fix で meta.json の tables を実際の参照テーブルに書き換える
-uv run scripts/validate.py --fix "queries/<description>"
+uv run scripts/validate.py check --fix "queries/<description>"
 
-# SQL を実行せず、形式だけ検証する
-uv run scripts/validate.py --no-run
+# result.json を作り直す（DB の版はそのまま）
+uv run scripts/validate.py update-result "queries/<description>"
+
+# DB の版を最新のリリースに進めて作り直す
+uv run scripts/validate.py update-result --release latest "queries/<description>"
 ```
 
-検証内容:
+### check
 
-- `meta.json` が `schema/meta.schema.json` に合っているか
-- ディレクトリ名と `description` が一致し、命名規則に従っているか
-- `plan` に SQL の構文や識別子が含まれていないか
-- `query.sql` の末尾の `;`、コメント（CTE の直前など）
-- SQL が読み取り専用の 1 文で、エラーなく 1 行以上返すか
-- `tables` が SQL の実際の参照テーブル（SQLite の authorizer で取得）と一致するか
-- 結果が `checks` の不変条件（一意キー、行数、行ごとの条件式）を満たすか
+次の順に検査する。DB が手元にない段階は飛ばし、最後に「未検査」として表示する。`--strict`（CI で使用）を付けると、飛ばした段階や `result.json` のないクエリがあれば失敗にする。
+
+- 形式
+  - `meta.json` が `schema/meta.schema.json` に合っているか
+  - ディレクトリ名と `description` が一致し、命名規則に従っているか
+  - `plan` に SQL の構文や識別子が含まれていないか
+  - `query.sql` の末尾の `;`、コメント（CTE の直前など）
+- SQLite（`database.sqlite3`）
+  - SQL が読み取り専用の 1 文で、エラーなく 1 行以上返すか
+  - `tables` が SQL の実際の参照テーブル（SQLite の authorizer で取得）と一致するか
+  - 結果が `checks` の不変条件（一意キー、行数、行ごとの条件式）を満たすか
+- DuckDB（`database.duckdb`）
+  - DuckDB 版でも実行できるか。どちらの配布物を使っても同じクエリ例が読めるようにするため
+- `result.json`
+  - そこに書かれた版の DB（DuckDB 版）での実行結果と一致するか
+
+DuckDB でつまずきやすいのは次の 2 つ。
+
+- **GROUP BY**: SQLite は GROUP BY にない列の select を許すが、DuckDB は許さない。
+  グループを一意に決める列（`p.id` で束ねているときの `p.name` など）を GROUP BY に足す。
+  SQLite の結果は変わらない
+- **関数の差**: `strftime` は引数の順が逆。`date` は `YYYY-MM-DD` の文字列なので、
+  `substr(date, 1, 4)` のようにどちらでも同じ意味になる書き方にする
+
+### update-result と result.json
+
+`result.json` は、クエリを書き換えたときに結果が変わったかどうかを差分として見えるようにするためのもの。
+
+- DB は日々更新されるので、結果は `result.json` の `db` に書いたリリース（DuckDB 版）で固定する。新しく作るクエリは最新のリリースになる
+- そのリリースの DB は初回に `gh release download` で取得し、`.cache/snapshot-db/<タグ>/` に置く（`gh` が必要）
+- `checks` は最新の DB で不変条件が成り立つかを見る。`result.json` は同じ DB で結果が変わっていないかを見る。最初から誤っている結果は検出できない
+- 固定した版の DB でクエリが動かなくなったとき（スキーマの変更に追従したとき）は、`--release latest` で版を進める
+- 結果が実行のたびに変わらないよう、クエリの最終結果の並び順は、同じ値の行の順序まで決めておく
 
 ## render.py
 
@@ -45,45 +74,6 @@ uv run scripts/render.py
 m-league-score-sheet の sync-db-docs ワークフローが main へ push するので、make.sh では扱わない。
 古い checkout から生成すると同期済みの内容を巻き戻してしまうため。
 ローカルで生成物を確認したいときは m-converter 側の `scripts/make-table-doc.py` を直接実行する。
-
-## validate-duckdb.py
-
-`queries/` の SQL が DuckDB 版のデータベースでも実行できるか検証する。
-SQLite 版の検証は validate.py が行い、こちらは DuckDB 固有の差だけを見る。
-
-```bash
-uv run scripts/validate-duckdb.py [--db FILE] [queries/<description> ...]
-```
-
-つまずきやすいのは次の 2 つ。
-
-- **GROUP BY**: SQLite は GROUP BY にない列の select を許すが、DuckDB は許さない。
-  グループを一意に決める列（`p.id` で束ねているときの `p.name` など）を GROUP BY に足す。
-  SQLite の結果は変わらない
-- **関数の差**: `strftime` は引数の順が逆。`date` は `YYYY-MM-DD` の文字列なので、
-  `substr(date, 1, 4)` のようにどちらでも同じ意味になる書き方にする
-
-## snapshot.py
-
-`queries/<description>/result.json`（固定した版の DB での実行結果）を検査・更新する。
-クエリを書き換えたときに結果が変わったかどうかを、`result.json` の差分として見えるようにするためのもの。
-
-```bash
-# 全件を検査する（result.json と一致しなければ失敗し、差分を表示する）
-uv run scripts/snapshot.py
-
-# 指定したクエリの result.json を作り直す（DB の版はそのまま）
-uv run scripts/snapshot.py --update "queries/<description>"
-
-# DB の版を最新のリリースに進めて作り直す
-uv run scripts/snapshot.py --update --release latest "queries/<description>"
-```
-
-- DB は日々更新されるので、結果は `result.json` の `db` に書いたリリース（DuckDB 版）で固定する。新しく作るクエリは最新のリリースになる
-- そのリリースの DB は初回に `gh release download` で取得し、`.cache/snapshot-db/<タグ>/` に置く（`gh` が必要）
-- `validate.py` は最新の DB で不変条件が成り立つかを見る。こちらは同じ DB で結果が変わっていないかを見る。最初から誤っている結果は検出できない
-- 固定した版の DB でクエリが動かなくなったとき（スキーマの変更に追従したとき）は、`--release latest` で版を進める
-- 結果が実行のたびに変わらないよう、クエリの最終結果の並び順は、同じ値の行の順序まで決めておく
 
 ## total-records.sh
 

@@ -1,29 +1,60 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["jsonschema>=4"]
+# dependencies = ["jsonschema>=4", "duckdb>=1.5.5"]
 # ///
-"""queries/<description>/ の query.sql と meta.json を検証する。
+"""queries/<description>/ のクエリ例を検証する。
 
-usage: uv run scripts/validate.py [--db FILE] [--no-run] [--fix] [QUERY_DIR_OR_FILE ...]
+usage:
+  uv run scripts/validate.py check [--fix] [--strict] [QUERY_DIR_OR_FILE ...]
+  uv run scripts/validate.py update-result [--release TAG] [QUERY_DIR_OR_FILE ...]
+
+check は次の順に検査する。DB が手元にない段階は飛ばして、その旨を表示する（--strict では失敗にする）。
+
+- 形式: meta.json、description、plan、query.sql の書き方
+- SQLite（database.sqlite3）: 実行できるか、tables が実際の参照と合うか、結果が checks を満たすか
+- DuckDB（database.duckdb）: DuckDB 版でも実行できるか
+- result.json: そこに書かれた版の DB での実行結果と一致するか
+
+update-result は result.json を作り直す。すでにあるクエリはその版のまま、ないクエリは最新のリリースで作る。
+--release TAG（latest で最新）を付けると、その版に進めて作り直す。
+
+result.json は、クエリを書き換えたときに結果が変わったかどうかを差分として見えるようにするためのもの。
+DB は日々更新されるので、result.json の db に書いたリリース（DuckDB 版）で結果を固定する。
+そのリリースの DB は初回に gh でダウンロードし、.cache/snapshot-db/<タグ>/ に置く。
 """
 
 import argparse
+import datetime
+import decimal
+import difflib
 import json
 import re
 import sqlite3
+import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 
+import duckdb
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parent.parent
 QUERIES_DIR = ROOT / "queries"
 SCHEMA_FILE = ROOT / "schema" / "meta.schema.json"
+SQLITE_DB = ROOT / "database.sqlite3"
+DUCKDB_DB = ROOT / "database.duckdb"
 QUERY_FILES = {"query.sql", "meta.json"}
-# result.json は scripts/snapshot.py が作る実行結果
-OPTIONAL_FILES = {"PLAN.md", "result.json"}
+RESULT_FILE = "result.json"
+OPTIONAL_FILES = {"PLAN.md", RESULT_FILE}
+# result.json の版の DB を置く場所と、リリースのファイル名
+CACHE_DIR = ROOT / ".cache" / "snapshot-db"
+RELEASE_ASSET = "duckdb.zip"
+# 1 クエリの実行時間上限（秒）
+TIMEOUT = 120
+# result.json との差分を表示する行数の上限
+DIFF_LINES = 30
 
 DESCRIPTION_RE = re.compile(
     r"^(?P<unit>シーズン・ステージ別の|シーズン別の|ステージ別の|暦年別の|全期間の)"
@@ -57,6 +88,11 @@ class Result:
         self.errors.append(msg)
 
 
+class Unavailable(Exception):
+    """検査に必要な DB を用意できなかった。"""
+
+
+# ---------------------------------------------------------------- 形式
 def check_files(r: Result, d: Path) -> bool:
     names = {p.name for p in d.iterdir()}
     for missing in sorted(QUERY_FILES - names):
@@ -119,8 +155,9 @@ def check_sql_style(r: Result, sql: str):
                 r.error(f"query.sql {i + 1} 行目: CTE の直前に目的を説明する -- コメントがありません: {line.strip()}")
 
 
-def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: float) -> tuple[set[str], list[str], list[tuple]] | None:
-    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+# ---------------------------------------------------------------- SQLite
+def run_sql(r: Result, sql: str, known_tables: set[str]) -> tuple[set[str], list[str], list[tuple]] | None:
+    conn = sqlite3.connect(f"file:{SQLITE_DB}?mode=ro", uri=True)
     read_tables: set[str] = set()
     denied: list[str] = []
 
@@ -132,7 +169,7 @@ def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: floa
             return sqlite3.SQLITE_DENY
         return sqlite3.SQLITE_OK
 
-    deadline = time.monotonic() + timeout
+    deadline = time.monotonic() + TIMEOUT
     conn.set_authorizer(authorizer)
     conn.set_progress_handler(lambda: 1 if time.monotonic() > deadline else 0, 10000)
     start = time.monotonic()
@@ -144,7 +181,7 @@ def run_sql(r: Result, sql: str, db: Path, known_tables: set[str], timeout: floa
         if denied:
             r.error(f"読み取り以外の操作は禁止です（SQLite action code: {', '.join(denied)}）")
         elif time.monotonic() > deadline:
-            r.error(f"実行が {timeout:.0f} 秒を超えました")
+            r.error(f"実行が {TIMEOUT} 秒を超えました")
         else:
             r.error(f"SQL 実行エラー: {e}")
         return None
@@ -222,6 +259,136 @@ def check_tables(r: Result, meta_path: Path, meta: dict, read_tables: set[str], 
         r.error(f"tables に SQL が参照しないテーブルがあります: {', '.join(extra)}（--fix で自動修正）")
 
 
+# ---------------------------------------------------------------- DuckDB
+def check_duckdb(r: Result, conn: duckdb.DuckDBPyConnection, sql: str):
+    """DuckDB 版でも実行できるかを見る。どちらの配布物を使っても同じクエリ例が読めるようにするため。"""
+    try:
+        conn.execute(sql).fetchall()
+    except duckdb.Error as e:
+        r.error(f"DuckDB 実行エラー: {str(e).splitlines()[0]}")
+
+
+# ---------------------------------------------------------------- result.json
+def gh(*args: str) -> str:
+    try:
+        return subprocess.run(["gh", *args], capture_output=True, text=True, cwd=ROOT, check=True).stdout
+    except FileNotFoundError:
+        raise Unavailable("gh コマンドがありません") from None
+    except subprocess.CalledProcessError as e:
+        raise Unavailable(f"gh {' '.join(args)} に失敗しました: {e.stderr.strip()}") from None
+
+
+def latest_release() -> str:
+    return gh("release", "view", "--json", "tagName", "--jq", ".tagName").strip()
+
+
+class ReleaseDatabases:
+    """リリースのタグごとの DuckDB 版 DB。手元になければダウンロードする。"""
+
+    def __init__(self):
+        self.conns: dict[str, duckdb.DuckDBPyConnection] = {}
+        self.unavailable: dict[str, str] = {}
+
+    def connect(self, tag: str) -> duckdb.DuckDBPyConnection:
+        if tag in self.unavailable:
+            raise Unavailable(self.unavailable[tag])
+        if tag not in self.conns:
+            try:
+                self.conns[tag] = duckdb.connect(str(self.download(tag)), read_only=True)
+            except Unavailable as e:
+                self.unavailable[tag] = str(e)
+                raise
+        return self.conns[tag]
+
+    @staticmethod
+    def download(tag: str) -> Path:
+        d = CACHE_DIR / tag
+        db = d / "database.duckdb"
+        if db.exists():
+            return db
+        d.mkdir(parents=True, exist_ok=True)
+        print(f"リリース {tag} の {RELEASE_ASSET} をダウンロードします", file=sys.stderr)
+        gh("release", "download", tag, "--pattern", RELEASE_ASSET, "--dir", str(d), "--clobber")
+        with zipfile.ZipFile(d / RELEASE_ASSET) as z:
+            name = next(n for n in z.namelist() if n.endswith(".duckdb"))
+            tmp = d / "database.duckdb.tmp"
+            tmp.write_bytes(z.read(name))
+        tmp.replace(db)
+        (d / RELEASE_ASSET).unlink()
+        return db
+
+
+def cell(v):
+    if v is None or isinstance(v, (bool, int, str)):
+        return v
+    if isinstance(v, (float, decimal.Decimal)):
+        # 集計の順序による末尾の誤差を落とす
+        return round(float(v), 6)
+    if isinstance(v, (datetime.date, datetime.datetime)):
+        return v.isoformat()
+    return str(v)
+
+
+def render_result(conn: duckdb.DuckDBPyConnection, sql: str, tag: str) -> str:
+    """実行結果を result.json の文字列にする。差分が読めるよう、結果の 1 行を 1 行に書く。"""
+    cur = conn.execute(sql)
+    columns = [c[0] for c in cur.description]
+    rows = [json.dumps([cell(v) for v in row], ensure_ascii=False) for row in cur.fetchall()]
+    lines = [
+        "{",
+        f'  "db": {json.dumps(tag)},',
+        f'  "columns": {json.dumps(columns, ensure_ascii=False)},',
+        '  "rows": [' + ("" if rows else "]"),
+        *[f"    {r}{',' if i < len(rows) - 1 else ''}" for i, r in enumerate(rows)],
+        *(["  ]"] if rows else []),
+        "}",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def recorded_release(result_path: Path) -> str | None:
+    try:
+        db = json.loads(result_path.read_text(encoding="utf-8")).get("db")
+    except (json.JSONDecodeError, AttributeError):
+        return None
+    return db if isinstance(db, str) and db else None
+
+
+def check_snapshot(r: Result, d: Path, sql: str, releases: ReleaseDatabases, strict: bool):
+    result_path = d / RESULT_FILE
+    if not result_path.exists():
+        # 作成途中のクエリを止めないよう、--strict（CI）でだけ失敗にする
+        if strict:
+            r.error("result.json がありません（update-result で作成）")
+        else:
+            r.notes.append("result.json 未作成")
+        return
+    tag = recorded_release(result_path)
+    if not tag:
+        r.error("result.json の db が読めません（update-result で作り直す）")
+        return
+    try:
+        actual = render_result(releases.connect(tag), sql, tag)
+    except Unavailable:
+        return  # 未検査としてまとめて表示する
+    except duckdb.Error as e:
+        r.error(
+            f"リリース {tag} の DB で実行できません: {str(e).splitlines()[0]}\n"
+            "    スキーマの変更に追従した場合は update-result --release latest で版を進めてください"
+        )
+        return
+    expected = result_path.read_text(encoding="utf-8")
+    if actual == expected:
+        return
+    diff = list(difflib.unified_diff(expected.splitlines(), actual.splitlines(), "result.json", "実行結果", lineterm="", n=0))
+    shown = diff[:DIFF_LINES] + ([f"…（残り {len(diff) - DIFF_LINES} 行）"] if len(diff) > DIFF_LINES else [])
+    r.error(
+        f"結果が result.json と違います（リリース {tag}）。意図した変更なら update-result で作り直してください\n"
+        + "\n".join(f"    {line}" for line in shown)
+    )
+
+
+# ---------------------------------------------------------------- コマンド
 def resolve_targets(paths: list[str]) -> list[Path]:
     if not paths:
         return sorted(p for p in QUERIES_DIR.iterdir() if p.is_dir())
@@ -236,24 +403,23 @@ def resolve_targets(paths: list[str]) -> list[Path]:
     return targets
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("paths", nargs="*", help="クエリのディレクトリまたはその中のファイル（省略時は全件）")
-    ap.add_argument("--db", default=str(ROOT / "database.sqlite3"), help="SQLite データベース")
-    ap.add_argument("--no-run", action="store_true", help="SQL を実行しない（tables の照合も省略）")
-    ap.add_argument("--fix", action="store_true", help="meta.json の tables を実際の参照テーブルで書き換える")
-    ap.add_argument("--timeout", type=float, default=120, help="1 クエリの実行時間上限（秒）")
-    args = ap.parse_args()
-
+def cmd_check(args) -> int:
     schema_validator = Draft202012Validator(json.loads(SCHEMA_FILE.read_text(encoding="utf-8")))
-    db = Path(args.db)
-    run = not args.no_run
-    if run and not db.exists():
-        sys.exit(f"データベースがありません: {db}（--no-run で実行なしの検証のみ可能）")
+    # 飛ばした段階と、その理由
+    skipped: dict[str, str] = {}
+
     known_tables: set[str] = set()
-    if run:
-        with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+    if SQLITE_DB.exists():
+        with sqlite3.connect(f"file:{SQLITE_DB}?mode=ro", uri=True) as conn:
             known_tables = {n for (n,) in conn.execute("SELECT name FROM sqlite_master WHERE type IN ('table', 'view')")}
+    else:
+        skipped["SQLite"] = f"{SQLITE_DB.name} がありません"
+    duck = None
+    if DUCKDB_DB.exists():
+        duck = duckdb.connect(str(DUCKDB_DB), read_only=True)
+    else:
+        skipped["DuckDB"] = f"{DUCKDB_DB.name} がありません"
+    releases = ReleaseDatabases()
 
     failed = 0
     targets = resolve_targets(args.paths)
@@ -272,13 +438,16 @@ def main():
             if meta is not None:
                 check_meta(r, d, meta, schema_validator)
             check_sql_style(r, sql)
-            if run:
-                result = run_sql(r, sql, db, known_tables, args.timeout)
+            if SQLITE_DB.exists():
+                result = run_sql(r, sql, known_tables)
                 if result is not None and isinstance(meta, dict):
                     read_tables, columns, rows = result
                     check_tables(r, meta_path, meta, read_tables, args.fix)
                     if isinstance(meta.get("checks"), dict):
                         check_result(r, meta["checks"], columns, rows)
+            if duck is not None:
+                check_duckdb(r, duck, sql)
+            check_snapshot(r, d, sql, releases, args.strict)
 
         rel = d.relative_to(ROOT)
         status = "FAIL" if r.errors else "PASS"
@@ -288,9 +457,59 @@ def main():
             print(f"  - {e}")
         failed += bool(r.errors)
 
+    for tag, reason in releases.unavailable.items():
+        skipped[f"result.json（リリース {tag}）"] = reason
     print(f"\n{len(targets) - failed}/{len(targets)} passed")
-    sys.exit(1 if failed else 0)
+    for stage, reason in skipped.items():
+        print(f"未検査: {stage}（{reason}）")
+    return 1 if failed or (args.strict and skipped) else 0
+
+
+def cmd_update_result(args) -> int:
+    releases = ReleaseDatabases()
+    failed = 0
+    try:
+        release = latest_release() if args.release == "latest" else args.release
+        for d in resolve_targets(args.paths):
+            if not (d / "query.sql").exists():
+                continue
+            sql = (d / "query.sql").read_text(encoding="utf-8")
+            result_path = d / RESULT_FILE
+            tag = recorded_release(result_path) if result_path.exists() else None
+            if release or not tag:
+                tag = release or (release := latest_release())
+            try:
+                text = render_result(releases.connect(tag), sql, tag)
+            except duckdb.Error as e:
+                print(f"FAIL: {d.relative_to(ROOT)}\n  - リリース {tag} の DB で実行できません: {str(e).splitlines()[0]}")
+                failed += 1
+                continue
+            if not result_path.exists() or result_path.read_text(encoding="utf-8") != text:
+                result_path.write_text(text, encoding="utf-8")
+                print(f"更新: {d.relative_to(ROOT)}（リリース {tag}）")
+    except Unavailable as e:
+        sys.exit(f"リリースの DB を用意できません: {e}")
+    return 1 if failed else 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="command", required=True)
+
+    check = sub.add_parser("check", help="クエリを検査する")
+    check.add_argument("paths", nargs="*", help="クエリのディレクトリまたはその中のファイル（省略時は全件）")
+    check.add_argument("--fix", action="store_true", help="meta.json の tables を実際の参照テーブルで書き換える")
+    check.add_argument("--strict", action="store_true", help="飛ばした段階や result.json のないクエリがあれば失敗にする（CI 用）")
+    check.set_defaults(func=cmd_check)
+
+    update = sub.add_parser("update-result", help="result.json を作り直す")
+    update.add_argument("paths", nargs="*", help="クエリのディレクトリまたはその中のファイル（省略時は全件）")
+    update.add_argument("--release", help="結果を作るリリースのタグ（latest で最新）。省略時は result.json の版のまま")
+    update.set_defaults(func=cmd_update_result)
+
+    args = ap.parse_args()
+    return args.func(args)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

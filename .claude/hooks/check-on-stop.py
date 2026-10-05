@@ -47,9 +47,7 @@ def main():
     if not paths:
         return
 
-    validate = ["uv", "run", "--quiet", "scripts/validate.py"]
-    if not (ROOT / "database.sqlite3").exists():
-        validate.append("--no-run")
+    validate = ["uv", "run", "--quiet", "scripts/validate.py", "check"]
     if any(p.startswith(VALIDATE_ALL_TRIGGERS) for p in paths):
         dirs = [str(d.relative_to(ROOT)) for d in sorted((ROOT / "queries").iterdir()) if d.is_dir()]
     else:

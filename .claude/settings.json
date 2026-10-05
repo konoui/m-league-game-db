@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(uv run scripts/validate.py:*)",
+      "Bash(uv run scripts/validate.py check:*)",
       "Bash(uv run scripts/render.py:*)",
       "Bash(sqlite3 -readonly:*)",
       "Bash(gh issue view:*)"

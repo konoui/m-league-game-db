@@ -25,15 +25,9 @@ jobs:
           unzip -o database.zip
           unzip -o duckdb.zip
 
+      # SQLite と DuckDB の両方で実行し、固定した版の DB での結果（result.json）とも比べる。
+      # --strict: 検査できなかった段階があれば失敗にする
       - name: Validate queries
-        run: uv run scripts/validate.py --db database.sqlite3
-
-      # クエリ例はどちらの配布物でも読めるようにしたいので、DuckDB でも実行できるか見る
-      - name: Validate queries on DuckDB
-        run: uv run scripts/validate-duckdb.py --db database.duckdb
-
-      # クエリの書き換えで結果が変わっていないか、固定した版の DB での結果（result.json）と比べる
-      - name: Check result snapshots
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uv run scripts/snapshot.py
+        run: uv run scripts/validate.py check --strict

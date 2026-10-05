@@ -15,8 +15,6 @@
 検証は LLM を使わないスクリプトで、手動でも実行できます（[詳細](./scripts/README.md)）。
 
 ```bash
-uv run scripts/validate.py         # 形式・SQL の実行・結果の不変条件を検証
-uv run scripts/validate-duckdb.py  # DuckDB 版でも実行できるかを検証
-uv run scripts/snapshot.py         # 固定した版の DB での実行結果（result.json）と一致するかを検査
+uv run scripts/validate.py check   # 形式、SQLite・DuckDB での実行、結果の不変条件、result.json との一致を検証
 uv run scripts/render.py           # queries/ から query-examples/ を生成
 ```

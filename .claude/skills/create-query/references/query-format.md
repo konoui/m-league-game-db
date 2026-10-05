@@ -1,6 +1,6 @@
 # クエリの形式と品質基準
 
-`scripts/validate.py` が機械的に検査するルールには「(validate)」を付けています。付いていないルールは検査されないため、作成者やレビュー担当が確認してください。
+`scripts/validate.py check` が機械的に検査するルールには「(validate)」を付けています。付いていないルールは検査されないため、作成者やレビュー担当が確認してください。
 
 ## ディレクトリ構成
 
@@ -9,12 +9,12 @@ queries/<description>/
   PLAN.md     # 作成時の計画と検証の記録（公開用 Markdown には含めない）
   query.sql   # SQL 本体
   meta.json   # description, plan, tables, checks（schema/meta.schema.json）
-  result.json # 固定した版の DB での実行結果（scripts/snapshot.py が作る）
+  result.json # 固定した版の DB での実行結果（validate.py update-result が作る）
 ```
 
 - ディレクトリ名は `description` と完全に一致させる (validate)
 - 置けるファイルは `query.sql`、`meta.json`（必須）と `PLAN.md`、`result.json`（任意）だけ (validate)
-- `result.json` は `uv run scripts/snapshot.py --update` で作る。手で編集しない (CI)
+- `result.json` は `uv run scripts/validate.py update-result` で作る。手で編集しない (validate)
 - `query-examples/*.md` は `uv run scripts/render.py` で生成するため、手で編集しない (CI)
 
 ## meta.json
@@ -82,7 +82,7 @@ SQL の構文、テーブル名、カラム名、CTE 名は書かない。すべ
 
 ### tables
 
-SQL が参照するテーブル・ビューを列挙する。`uv run scripts/validate.py --fix <dir>` を実行すると、実際に参照しているテーブルに合わせて自動で書き換わる (validate)
+SQL が参照するテーブル・ビューを列挙する。`uv run scripts/validate.py check --fix <dir>` を実行すると、実際に参照しているテーブルに合わせて自動で書き換わる (validate)
 
 ### checks
 
@@ -127,9 +127,9 @@ SQL が参照するテーブル・ビューを列挙する。`uv run scripts/val
 
 クエリを書き換えたときに結果が変わったかどうかを、差分として見えるようにするためのファイル。DB は日々更新されるので、特定のリリースの DB（DuckDB 版）での実行結果を保存する。`db` にそのリリースのタグ、`columns` に出力カラム、`rows` に結果を 1 行ずつ持つ。
 
-- 検査: `uv run scripts/snapshot.py [queries/<description> ...]`。保存した結果と一致しなければ失敗する (CI)
-- 作り直し: `uv run scripts/snapshot.py --update queries/<description>`。DB の版は変えず、そのクエリの結果だけを作り直す
-- 版を進める: `uv run scripts/snapshot.py --update --release latest queries/<description>`。固定した版の DB でクエリが動かなくなったとき（スキーマの変更に追従したとき）に使う
+- 検査: `uv run scripts/validate.py check [queries/<description> ...]`。保存した結果と一致しなければ失敗する (validate)
+- 作り直し: `uv run scripts/validate.py update-result queries/<description>`。DB の版は変えず、そのクエリの結果だけを作り直す
+- 版を進める: `uv run scripts/validate.py update-result --release latest queries/<description>`。固定した版の DB でクエリが動かなくなったとき（スキーマの変更に追従したとき）に使う
 - 結果が実行のたびに変わらないよう、最終結果の並び順は同じ値の行の順序まで決める。`unique` の列を並び順の末尾に足すと決まる
 
 `checks` は最新の DB で不変条件が成り立つかを見るもので、`result.json` は同じ DB で結果が変わっていないかを見るもの。最初から誤っている結果は `result.json` では検出できない。
@@ -140,7 +140,7 @@ SQL が参照するテーブル・ビューを列挙する。`uv run scripts/val
 - 末尾に `;` を付ける (validate)
 - 結果が 1 行以上返る (validate)
 - テーブル名・カラム名は `TABLE.sqlite3.md` に従う。テーブルや列の使い分け（所属チームの引き方など）は、該当テーブルの注記（`>` で始まる行）を読んで従う
-- SQLite と DuckDB の両方で動く書き方にする。どちらか一方にしかない関数や構文は使わない
+- SQLite と DuckDB の両方で動く書き方にする。どちらか一方にしかない関数や構文は使わない (validate)
 - 出力カラムの別名はなるべく日本語にする（例: `AS プレイヤー名`）
 - シーズンは `start_year` を使う
 - 順序に意味がある処理（連続記録、何番目か、直前との比較）では、並び順に使う列が実際にその順序を表しているか確かめる。区分を表す文字列（ステージ名など）は文字列順に並ぶため、時系列の並び順に入れない
