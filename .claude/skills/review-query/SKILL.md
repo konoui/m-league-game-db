@@ -71,8 +71,11 @@ FAIL があれば先に直す。`tables` の不一致は `--fix` で直る。
 ```bash
 uv run scripts/validate.py --fix queries/<description>
 uv run scripts/validate-duckdb.py queries/<description>
+uv run scripts/snapshot.py queries/<description>
 uv run scripts/render.py
 ```
+
+`snapshot.py` が不一致を出したら、表示された差分が意図した変更かを確かめる。書き換えのつもり（結果を変えない修正）で差分が出たら、修正が誤っている。意図した変更なら `uv run scripts/snapshot.py --update queries/<description>` で `result.json` を作り直し、差分をユーザーに示す。
 
 ### 4. 報告する
 

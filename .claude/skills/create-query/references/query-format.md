@@ -9,10 +9,12 @@ queries/<description>/
   PLAN.md     # 作成時の計画と検証の記録（公開用 Markdown には含めない）
   query.sql   # SQL 本体
   meta.json   # description, plan, tables, checks（schema/meta.schema.json）
+  result.json # 固定した版の DB での実行結果（scripts/snapshot.py が作る）
 ```
 
 - ディレクトリ名は `description` と完全に一致させる (validate)
-- 置けるファイルは `query.sql`、`meta.json`（必須）と `PLAN.md`（任意）だけ (validate)
+- 置けるファイルは `query.sql`、`meta.json`（必須）と `PLAN.md`、`result.json`（任意）だけ (validate)
+- `result.json` は `uv run scripts/snapshot.py --update` で作る。手で編集しない (CI)
 - `query-examples/*.md` は `uv run scripts/render.py` で生成するため、手で編集しない (CI)
 
 ## meta.json
@@ -120,6 +122,17 @@ SQL が参照するテーブル・ビューを列挙する。`uv run scripts/val
 - 式が NULL になる行は違反とみなされない。NULL を許さないカラムには `IS NOT NULL` を書く
 - 数字で始まるカラム名はダブルクォートで囲む（例: `"1着獲得回数" >= 1`）。存在しないカラム名はエラーになる
 - `;` は使えない
+
+## result.json
+
+クエリを書き換えたときに結果が変わったかどうかを、差分として見えるようにするためのファイル。DB は日々更新されるので、特定のリリースの DB（DuckDB 版）での実行結果を保存する。`db` にそのリリースのタグ、`columns` に出力カラム、`rows` に結果を 1 行ずつ持つ。
+
+- 検査: `uv run scripts/snapshot.py [queries/<description> ...]`。保存した結果と一致しなければ失敗する (CI)
+- 作り直し: `uv run scripts/snapshot.py --update queries/<description>`。DB の版は変えず、そのクエリの結果だけを作り直す
+- 版を進める: `uv run scripts/snapshot.py --update --release latest queries/<description>`。固定した版の DB でクエリが動かなくなったとき（スキーマの変更に追従したとき）に使う
+- 結果が実行のたびに変わらないよう、最終結果の並び順は同じ値の行の順序まで決める。`unique` の列を並び順の末尾に足すと決まる
+
+`checks` は最新の DB で不変条件が成り立つかを見るもので、`result.json` は同じ DB で結果が変わっていないかを見るもの。最初から誤っている結果は `result.json` では検出できない。
 
 ## query.sql
 

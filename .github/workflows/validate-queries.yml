@@ -31,3 +31,9 @@ jobs:
       # クエリ例はどちらの配布物でも読めるようにしたいので、DuckDB でも実行できるか見る
       - name: Validate queries on DuckDB
         run: uv run scripts/validate-duckdb.py --db database.duckdb
+
+      # クエリの書き換えで結果が変わっていないか、固定した版の DB での結果（result.json）と比べる
+      - name: Check result snapshots
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run scripts/snapshot.py

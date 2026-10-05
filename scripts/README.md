@@ -63,6 +63,28 @@ uv run scripts/validate-duckdb.py [--db FILE] [queries/<description> ...]
 - **関数の差**: `strftime` は引数の順が逆。`date` は `YYYY-MM-DD` の文字列なので、
   `substr(date, 1, 4)` のようにどちらでも同じ意味になる書き方にする
 
+## snapshot.py
+
+`queries/<description>/result.json`（固定した版の DB での実行結果）を検査・更新する。
+クエリを書き換えたときに結果が変わったかどうかを、`result.json` の差分として見えるようにするためのもの。
+
+```bash
+# 全件を検査する（result.json と一致しなければ失敗し、差分を表示する）
+uv run scripts/snapshot.py
+
+# 指定したクエリの result.json を作り直す（DB の版はそのまま）
+uv run scripts/snapshot.py --update "queries/<description>"
+
+# DB の版を最新のリリースに進めて作り直す
+uv run scripts/snapshot.py --update --release latest "queries/<description>"
+```
+
+- DB は日々更新されるので、結果は `result.json` の `db` に書いたリリース（DuckDB 版）で固定する。新しく作るクエリは最新のリリースになる
+- そのリリースの DB は初回に `gh release download` で取得し、`.cache/snapshot-db/<タグ>/` に置く（`gh` が必要）
+- `validate.py` は最新の DB で不変条件が成り立つかを見る。こちらは同じ DB で結果が変わっていないかを見る。最初から誤っている結果は検出できない
+- 固定した版の DB でクエリが動かなくなったとき（スキーマの変更に追従したとき）は、`--release latest` で版を進める
+- 結果が実行のたびに変わらないよう、クエリの最終結果の並び順は、同じ値の行の順序まで決めておく
+
 ## total-records.sh
 
 全てのテーブルの合計レコード数を出力するユーティリティ。

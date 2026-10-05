@@ -5,7 +5,7 @@ description: M リーグ試合データベースの SQL クエリ例を queries/
 
 # クエリ作成
 
-`queries/<description>/` に `query.sql` と `meta.json` を作り、検証を通し、公開用の Markdown を生成するまでを行う。
+`queries/<description>/` に `query.sql` と `meta.json` を作り、検証を通し、実行結果（`result.json`）を保存して、公開用の Markdown を生成するまでを行う。
 
 ## 参照するもの
 
@@ -101,11 +101,14 @@ sqlite3 -readonly -header -column database.sqlite3 < "queries/<description>/quer
 - 件数を絞る場合は、絞る位置に同数の行が何件あるかを確かめ、同数の場合の順序が plan の説明どおりか見る
 - クエリをわざと壊し（並び順や条件を変える）、`checks` が違反を検出するか確かめる。検出しなければ、その誤りで破れるルールを足す
 
-### 6. 公開用 Markdown を生成する
+### 6. 実行結果を保存し、公開用 Markdown を生成する
 
 ```bash
+uv run scripts/snapshot.py --update queries/<description>
 uv run scripts/render.py
 ```
+
+`snapshot.py --update` は、最新のリリースの DB（DuckDB 版）での実行結果とその版を `result.json` に保存する。
 
 `query-examples/<description>.md` と `query-examples/README.md` が更新される。
 
