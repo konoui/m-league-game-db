@@ -81,5 +81,5 @@ SELECT
     streak_start_kyoku AS 記録開始局順,
     streak_end_kyoku AS 記録終了局順
 FROM consecutive_agari
-ORDER BY consecutive_agari_count DESC, season_year DESC, date DESC
+ORDER BY consecutive_agari_count DESC, season_year DESC, date DESC, player_name, game_id, streak_start_kyoku
 LIMIT 5;

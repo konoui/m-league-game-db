@@ -58,5 +58,5 @@ SELECT
     streak_start_date AS 記録開始日,
     streak_end_date AS 記録終了日
 FROM consecutive_streaks
-ORDER BY streak_length DESC, season_year DESC, stage, team_name
+ORDER BY streak_length DESC, season_year DESC, stage, team_name, streak_start_date, streak_group
 LIMIT 10;

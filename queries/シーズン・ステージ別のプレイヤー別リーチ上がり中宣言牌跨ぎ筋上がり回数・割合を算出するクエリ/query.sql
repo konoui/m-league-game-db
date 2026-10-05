@@ -62,4 +62,4 @@ JOIN player p ON mc.actor_player_id = p.id
 JOIN game_player_result gpr ON g.id = gpr.game_id AND mc.actor_player_id = gpr.player_id
 JOIN team t ON gpr.team_id = t.id
 GROUP BY ls.id, ls.start_year, ls.end_year, ss.id, ss.stage, mc.actor_player_id, p.name, t.name
-ORDER BY ls.start_year DESC, ss.stage, 跨ぎ筋上がり割合 DESC;
+ORDER BY ls.start_year DESC, ss.stage, 跨ぎ筋上がり割合 DESC, プレイヤー名;

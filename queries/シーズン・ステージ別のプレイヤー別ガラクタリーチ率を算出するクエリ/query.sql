@@ -93,4 +93,4 @@ JOIN player p ON stats.actor_player_id = p.id
 -- チーム名の結合
 JOIN team t ON stats.team_id = t.id
 GROUP BY start_year, stage, actor_player_id, p.name, t.name
-ORDER BY start_year DESC, stage, ガラクタリーチ率 DESC;
+ORDER BY start_year DESC, stage, ガラクタリーチ率 DESC, プレイヤー名;

@@ -42,4 +42,4 @@ SELECT
     sensei_reach_count AS 先制リーチ回数,
     ROUND(sensei_reach_count * 100.0 / reach_count, 2) AS 先制リーチ率
 FROM player_reach_stats
-ORDER BY start_year DESC, stage, 先制リーチ率 DESC;
+ORDER BY start_year DESC, stage, 先制リーチ率 DESC, プレイヤー名;
