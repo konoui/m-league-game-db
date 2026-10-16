@@ -39,4 +39,4 @@ JOIN sanbaiman_in_game s ON y.game_id = s.game_id
 JOIN game g ON y.game_id = g.id
 JOIN season_stage ss ON g.season_stage_id = ss.id
 JOIN league_season ls ON ss.league_season_id = ls.id
-ORDER BY g.date DESC;
+ORDER BY g.date DESC, ラウンド番号, 役満, 三倍満;

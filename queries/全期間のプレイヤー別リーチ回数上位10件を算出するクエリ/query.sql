@@ -22,5 +22,5 @@ JOIN player p ON re.actor_player_id = p.id
 JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
 JOIN team t ON gpr.team_id = t.id
 GROUP BY g.id, p.id, ls.start_year, ss.stage, g.date, g.stage_game_number, p.name, t.name
-ORDER BY リーチ回数 DESC, シーズン年 DESC, ステージ, 試合日 DESC, プレイヤー名
+ORDER BY リーチ回数 DESC, シーズン年 DESC, ステージ, 試合日 DESC, プレイヤー名, ラウンド番号
 LIMIT 10;

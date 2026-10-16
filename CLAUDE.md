@@ -4,7 +4,7 @@ M リーグの試合情報 SQLite データベースの配布と、そのデー�
 
 ## 構成
 
-- `queries/<description>/`: クエリ例の正。`query.sql`（SQL 本体）、`meta.json`（description, plan, tables, checks）、任意の `PLAN.md`（作成時の計画と検証の記録）
+- `queries/<description>/`: クエリ例の正。`query.sql`（SQL 本体）、`meta.json`（description, plan, tables, checks）、`result.json`（固定した版の DB での実行結果と、その版）、任意の `PLAN.md`（作成時の計画と検証の記録）
 - `schema/meta.schema.json`: `meta.json` の JSON Schema
 - `query-examples/`: `queries/` から生成する公開用 Markdown。**手で編集しない**
 - `TABLE.sqlite3.md`, `TABLE.duckdb.md`, `DB_CHANGELOG.md`, `DB_NAMING.md`, `PAI_FORMAT.md`, `YAKU_NAMES.md`: m-league-score-sheet の sync-db-docs ワークフローが main へ push する。直接編集しない
@@ -18,15 +18,15 @@ M リーグの試合情報 SQLite データベースの配布と、そのデー�
 
 hook（`.claude/settings.json`）:
 
-- PostToolUse: `queries/` 配下を編集すると、そのクエリを `scripts/validate.py` で検証する
+- PostToolUse: `queries/` 配下を編集すると、そのクエリを `scripts/validate.py check` で検証する
 - Stop: 未コミットの変更があれば、変更したクエリの検証（schema や validate.py の変更時は全件）と `render.py --check` を実行し、失敗したら作業を続けさせる
 
 ## コマンド
 
 ```bash
-uv run scripts/validate.py [--fix] [queries/<description> ...]  # 検証
-uv run scripts/validate-duckdb.py [queries/<description> ...]  # DuckDB でも実行できるか検証
-uv run scripts/render.py [--check]                              # query-examples/ を生成
+uv run scripts/validate.py check [--fix] [queries/<description> ...]   # 検証（SQLite・DuckDB での実行と、result.json との一致）
+uv run scripts/validate.py update-result [queries/<description> ...]   # result.json を作り直す
+uv run scripts/render.py [--check]                                     # query-examples/ を生成
 ```
 
-`queries/` を変更したら、コミット前に上の 2 つを実行する。CI（`.github/workflows/validate-queries.yml`）でも同じ内容を検査する。
+`queries/` を変更したら、コミット前に `check` と `render.py` を実行する。`check` が result.json との不一致を出したら、差分が意図した変更かを確かめてから `update-result` で作り直す。スキーマの変更に追従したクエリは `update-result --release latest` で DB の版を進める。CI（`.github/workflows/validate-queries.yml`）でも同じ内容を検査する。

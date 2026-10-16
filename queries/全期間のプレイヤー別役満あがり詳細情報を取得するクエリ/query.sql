@@ -45,4 +45,4 @@ LEFT JOIN player tp ON ae.target_player_id = tp.id
 JOIN game_player_result gpr ON g.id = gpr.game_id AND p.id = gpr.player_id
 JOIN team t ON gpr.team_id = t.id
 WHERE ae.is_yakuman = 1
-ORDER BY g.date DESC, g.stage_game_number DESC, k.id DESC;
+ORDER BY g.date DESC, g.stage_game_number DESC, k.id DESC, プレイヤー名;

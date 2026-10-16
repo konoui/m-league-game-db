@@ -74,5 +74,5 @@ SELECT
     streak_start_kyoku AS 記録開始局順,
     streak_end_kyoku AS 記録終了局順
 FROM consecutive_tenpai
-ORDER BY consecutive_tenpai_count DESC, season_year DESC, date DESC
+ORDER BY consecutive_tenpai_count DESC, season_year DESC, date DESC, player_name, game_id, streak_start_kyoku
 LIMIT 5;

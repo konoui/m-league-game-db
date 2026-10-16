@@ -23,9 +23,7 @@ def main():
     if path.parent.parent != QUERIES_DIR or not (path.parent / "meta.json").exists():
         return
 
-    cmd = ["uv", "run", "--quiet", str(ROOT / "scripts" / "validate.py"), str(path.parent)]
-    if not (ROOT / "database.sqlite3").exists():
-        cmd.append("--no-run")
+    cmd = ["uv", "run", "--quiet", str(ROOT / "scripts" / "validate.py"), "check", str(path.parent)]
     proc = subprocess.run(cmd, capture_output=True, text=True, cwd=ROOT)
     if proc.returncode != 0:
         print(proc.stdout + proc.stderr, file=sys.stderr)

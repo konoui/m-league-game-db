@@ -22,4 +22,4 @@
      WHERE ae.is_called = false
        AND yn.name = '裏ドラ'
        AND ye.han = 3
-     ORDER BY ls.start_year, g.date, p.name;
+     ORDER BY ls.start_year, g.date, p.name, description;

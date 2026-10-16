@@ -77,4 +77,4 @@ JOIN rank_stats rks ON rs.start_year = rks.start_year
   AND rs.stage = rks.stage 
   AND rs.player_name = rks.player_name
 WHERE rs.total_reach_count >= 10
-ORDER BY rs.start_year, rs.stage, rs.reach_success_rate DESC;
+ORDER BY rs.start_year, rs.stage, rs.reach_success_rate DESC, rs.player_name;

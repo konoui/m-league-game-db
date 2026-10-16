@@ -13,5 +13,5 @@ JOIN game g ON gpr.game_id = g.id
 JOIN season_stage ss ON g.season_stage_id = ss.id
 JOIN league_season ls ON ss.league_season_id = ls.id
 WHERE gpr.rank = 3
-ORDER BY gpr.score DESC
+ORDER BY gpr.score DESC, g.date DESC, g.id DESC, p.name
 LIMIT 5;

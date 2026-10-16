@@ -15,4 +15,4 @@ JOIN league_season ls ON ss.league_season_id = ls.id
 JOIN team t ON gpr.team_id = t.id
 WHERE gpr.rank = 1
 GROUP BY substr(g.date, 1, 4), p.id, p.name, t.name
-ORDER BY 暦年 DESC, "1着獲得回数" DESC;
+ORDER BY 暦年 DESC, "1着獲得回数" DESC, プレイヤー名, チーム名;

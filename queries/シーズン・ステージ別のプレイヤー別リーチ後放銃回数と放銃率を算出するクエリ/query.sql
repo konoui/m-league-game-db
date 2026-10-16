@@ -50,4 +50,4 @@ SELECT
     dealin_after_reach_count AS リーチ後放銃回数,
     dealin_after_reach_rate AS リーチ後放銃率
 FROM player_reach_dealin_stats
-ORDER BY start_year DESC, stage, dealin_after_reach_rate DESC;
+ORDER BY start_year DESC, stage, dealin_after_reach_rate DESC, プレイヤー名;
