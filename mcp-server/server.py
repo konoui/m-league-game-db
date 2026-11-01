@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["mcp>=2,<3", "duckdb>=1.1", "httpx>=0.27"]
+# dependencies = ["mcp>=2,<3", "duckdb>=1.1,<3", "httpx>=0.27"]
 # ///
 """M リーグ試合データベースのローカル MCP サーバー（教えてMリーグハカセ用）。
 
@@ -18,6 +18,8 @@ import json
 import logging
 import os
 import re
+import shutil
+import tempfile
 import threading
 import zipfile
 from pathlib import Path
@@ -31,9 +33,13 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 HERE = Path(__file__).resolve().parent
 # 拡張機能（.mcpb）では server.py の隣の docs/ に文書とクエリ例を同梱する。リポジトリ内ではリポジトリ直下を読む
-REPO = Path(os.environ["MLEAGUE_DOC_ROOT"]) if os.environ.get("MLEAGUE_DOC_ROOT") else (HERE / "docs" if (HERE / "docs").is_dir() else HERE.parent)
+BUNDLED_DOCS = Path(os.environ["MLEAGUE_DOC_ROOT"]) if os.environ.get("MLEAGUE_DOC_ROOT") else (HERE / "docs" if (HERE / "docs").is_dir() else HERE.parent)
+# .mcpb では DB と同じリリースの文書をキャッシュから優先して読む。
+# MLEAGUE_DB / MLEAGUE_DOC_ROOT を指定しているときは版が合わない可能性があるので、同梱側だけを使う。
+USE_CACHE_DOCS = not os.environ.get("MLEAGUE_DB") and not os.environ.get("MLEAGUE_DOC_ROOT") and (HERE / "docs").is_dir()
 RELEASE_REPO = os.environ.get("MLEAGUE_RELEASE_REPO", "konoui/m-league-game-db")
 CACHE_DIR = Path(os.environ.get("MLEAGUE_CACHE_DIR", Path.home() / ".cache" / "m-league-game-db"))
+CACHE_DOCS = CACHE_DIR / "docs"
 DB_PATH = Path(os.environ["MLEAGUE_DB"]) if os.environ.get("MLEAGUE_DB") else CACHE_DIR / "database.duckdb"
 TAG_PATH = CACHE_DIR / "release_tag.txt"
 
@@ -50,7 +56,7 @@ mcp = MCPServer(
     instructions=(
         "M リーグ（プロ麻雀リーグ）の全試合データ（2018-19 シーズン以降の試合・局・打牌単位）を DuckDB で引けるサーバー。\n"
         "進め方: 1) 質問の解釈を決める（期間、ステージ、集計単位、連続記録をシーズンで区切るか、率を比べるときの試合数の下限）。"
-        "2) search_query_examples で似たクエリ例を探し、よく使う型は get_doc('recipes') を見る。"
+        "2) search_query_examples で似たクエリ例を探す。"
         "3) 麻雀用語は get_doc('glossary') で列との対応を確かめ、選手名は find_player で正式表記にする。列は describe_table で確かめる。"
         "4) run_sql で実行する。5) 1 位の記録などは、該当期間の試合を 1 行ずつ並べて集計と一致するか確かめる。\n"
         "答え方: 結論を先に書き、表で示し、最後に数え方（解釈・試合数の下限・区切り方）とデータの最終試合日（database_info）を書く。\n"
@@ -64,6 +70,48 @@ mcp = MCPServer(
 
 
 # ---------------------------------------------------------------- DB
+DOCS_EXCLUDE = {"db_changelog.md"}
+
+
+def _extract_docs(z: zipfile.ZipFile, dest: Path, tag: str) -> Path | None:
+    """リリース zip 直下の md を dest に展開する。DB_CHANGELOG.md は LLM に渡さないので除外する。"""
+    dest.mkdir(parents=True, exist_ok=True)
+    found = False
+    for info in z.infolist():
+        name = info.filename
+        if info.is_dir() or "/" in name or "\\" in name or name.casefold() in DOCS_EXCLUDE or not name.endswith(".md"):
+            continue
+        (dest / name).write_bytes(z.read(info))
+        found = True
+    if not found:
+        return None
+    (dest / ".tag").write_text(tag, encoding="utf-8")
+    return dest
+
+
+def _remove_path(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path, ignore_errors=True)
+    elif path.exists():
+        path.unlink()
+
+
+def _replace_cache_docs(src: Path) -> None:
+    """展開済みの文書をキャッシュへ差し替える。失敗したら元に戻す。"""
+    dst = CACHE_DOCS
+    old = src.parent / "docs.old"  # 同時実行しても衝突しないよう、展開先の隣に置く
+    _remove_path(old)
+    if dst.exists():
+        dst.rename(old)
+    try:
+        src.rename(dst)
+    except Exception:
+        if old.exists() and not dst.exists():
+            old.rename(dst)
+        raise
+    _remove_path(old)
+
+
 def _download_latest() -> str:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     with httpx.Client(follow_redirects=True, timeout=120) as c:
@@ -71,12 +119,19 @@ def _download_latest() -> str:
         tag = rel.get("tag_name", "unknown")
         url = next(a["browser_download_url"] for a in rel["assets"] if a["name"] == "duckdb.zip")
         data = c.get(url).content
-    with zipfile.ZipFile(io.BytesIO(data)) as z:
-        name = next(n for n in z.namelist() if n.endswith(".duckdb"))
-        tmp = CACHE_DIR / "database.duckdb.tmp"
-        tmp.write_bytes(z.read(name))
-    tmp.replace(CACHE_DIR / "database.duckdb")  # atomic swap
-    TAG_PATH.write_text(tag)
+    tmp_dir = Path(tempfile.mkdtemp(dir=CACHE_DIR, prefix=".download-"))
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            name = next(n for n in z.namelist() if n.endswith(".duckdb"))
+            tmp_db = tmp_dir / "database.duckdb"
+            tmp_db.write_bytes(z.read(name))
+            tmp_docs = _extract_docs(z, tmp_dir / "docs", tag)
+        if tmp_docs is not None:
+            _replace_cache_docs(tmp_docs)
+        tmp_db.replace(CACHE_DIR / "database.duckdb")  # atomic swap
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    TAG_PATH.write_text(tag, encoding="utf-8")
     return tag
 
 
@@ -97,7 +152,7 @@ def _maybe_update() -> None:
         return
     with _update_lock:
         try:
-            current = TAG_PATH.read_text().strip() if TAG_PATH.exists() else None
+            current = TAG_PATH.read_text(encoding="utf-8").strip() if TAG_PATH.exists() else None
             if _latest_tag() != current:
                 _download_latest()
         except Exception as e:  # noqa: BLE001 - 更新の失敗で質問への回答を止めない
@@ -133,7 +188,7 @@ def _query(sql: str, max_rows: int) -> dict:
         if rel is None:
             return {"error": "結果を返す SELECT 文を渡してください"}
         cols = rel.columns
-        rows = rel.fetchmany(max_rows + 1)
+        rows = rel.limit(max_rows + 1).fetchall()
         truncated = len(rows) > max_rows
         rows = rows[:max_rows]
         return {"columns": cols, "rows": [[_jsonable(v) for v in r] for r in rows], "row_count": len(rows), "truncated": truncated}
@@ -160,12 +215,47 @@ _READONLY = re.compile(r"^\s*(--[^\n]*\n\s*|/\*.*?\*/\s*)*(select|with|from|desc
 
 
 # ---------------------------------------------------------------- docs & examples
-def _read(name: str) -> str:
-    return (REPO / name).read_text(encoding="utf-8")
+def _cache_docs_dir() -> Path | None:
+    """DB と同じリリースの文書がキャッシュにあれば返す。"""
+    if not USE_CACHE_DOCS or not CACHE_DOCS.is_dir():
+        return None
+    try:
+        tag = TAG_PATH.read_text(encoding="utf-8").strip()
+        docs_tag = (CACHE_DOCS / ".tag").read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not tag or tag != docs_tag:
+        return None
+    return CACHE_DOCS
+
+
+DOC_FILES = {
+    "glossary": ("GLOSSARY.md", "麻雀・M リーグ用語と DB の列の対応"),
+    "mleague": ("MLEAGUE.md", "M リーグのルール（シーズン構成・得点計算）"),
+    "tables": ("TABLE.duckdb.md", "全テーブルの詳細な説明（長い）"),
+    "naming": ("DB_NAMING.md", "DB の命名規則"),
+    "pai_format": ("PAI_FORMAT.md", "牌の表記"),
+    "yaku_names": ("YAKU_NAMES.md", "役名一覧"),
+}
+
+
+def _doc_path(name: str) -> Path:
+    rel = DOC_FILES[name][0]
+    candidates = []
+    cache = _cache_docs_dir()
+    if cache is not None:
+        candidates.append(cache / rel)
+    candidates.append(BUNDLED_DOCS / rel)
+    if name == "glossary":  # リポジトリ実行時は mcp-server/ にある
+        candidates.append(HERE / rel)
+    for path in candidates:
+        if path.is_file():
+            return path
+    raise FileNotFoundError(f"文書 {rel} が見つかりません")
 
 
 def _table_sections() -> dict[str, str]:
-    md = _read("TABLE.duckdb.md")
+    md = _doc_path("tables").read_text(encoding="utf-8")
     out = {}
     for m in re.finditer(r"^#{3,4} ([a-z_]+)（(.+?)）\n(.*?)(?=^#{2,4} |\Z)", md, re.M | re.S):
         out[m.group(1)] = f"### {m.group(1)}（{m.group(2)}）\n{m.group(3).strip()}"
@@ -174,7 +264,7 @@ def _table_sections() -> dict[str, str]:
 
 def _examples() -> list[dict]:
     items = []
-    for d in sorted((REPO / "queries").iterdir()):
+    for d in sorted((BUNDLED_DOCS / "queries").iterdir()):
         if not (d / "meta.json").exists():
             continue
         meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
@@ -199,18 +289,6 @@ def _normalize(s: str) -> str:
 def _bigrams(s: str) -> set[str]:
     s = re.sub(r"\s+", "", s.lower())
     return {s[i:i + 2] for i in range(len(s) - 1)}
-
-
-DOCS = {
-    "recipes": ((REPO / "RECIPES.md") if (REPO / "RECIPES.md").exists() else (HERE / "RECIPES.md"), "よく使う SQL の型（連続記録・率ランキング・直接対決・役満一覧・生の行での確認）"),
-    "glossary": ((REPO / "GLOSSARY.md") if (REPO / "GLOSSARY.md").exists() else (HERE / "GLOSSARY.md"), "麻雀・M リーグ用語と DB の列の対応"),
-    "mleague": (REPO / "MLEAGUE.md", "M リーグのルール（シーズン構成・得点計算）"),
-    "tables": (REPO / "TABLE.duckdb.md", "全テーブルの詳細な説明（長い）"),
-    "naming": (REPO / "DB_NAMING.md", "DB の命名規則"),
-    "pai_format": (REPO / "PAI_FORMAT.md", "牌の表記"),
-    "yaku_names": (REPO / "YAKU_NAMES.md", "役名一覧"),
-    "changelog": (REPO / "DB_CHANGELOG.md", "DB の変更履歴"),
-}
 
 
 # ---------------------------------------------------------------- tools
@@ -295,11 +373,14 @@ def find_player(name: str) -> list[dict]:
 
 @mcp.tool()
 def get_doc(name: str) -> str:
-    """参考文書を返す。name: recipes（よく使う SQL の型）, glossary（用語と列の対応）, mleague（ルール）, tables（全テーブル説明・長い）,
-    naming, pai_format（牌の表記）, yaku_names（役名）, changelog。"""
-    if name not in DOCS:
-        return "name は次のいずれか: " + ", ".join(f"{k}（{v[1]}）" for k, v in DOCS.items())
-    return DOCS[name][0].read_text(encoding="utf-8")
+    """参考文書を返す。name: glossary（用語と列の対応）, mleague（ルール）, tables（全テーブル説明・長い）,
+    naming, pai_format（牌の表記）, yaku_names（役名）。"""
+    if name not in DOC_FILES:
+        return "name は次のいずれか: " + ", ".join(f"{k}（{v[1]}）" for k, v in DOC_FILES.items())
+    try:
+        return _doc_path(name).read_text(encoding="utf-8")
+    except FileNotFoundError as e:
+        return str(e)
 
 
 @mcp.tool()
@@ -308,7 +389,7 @@ def database_info() -> dict:
     path = _ensure_db()
     res = _query("SELECT min(date), max(date), count(*) FROM game", 1)
     lo, hi, n = res["rows"][0] if res.get("rows") else (None, None, None)
-    return {"db_path": str(path), "release_tag": TAG_PATH.read_text().strip() if TAG_PATH.exists() else "unknown",
+    return {"db_path": str(path), "release_tag": TAG_PATH.read_text(encoding="utf-8").strip() if TAG_PATH.exists() else "unknown",
             "first_game": lo, "latest_game": hi, "games": n, "size_mb": round(path.stat().st_size / 1e6, 1)}
 
 
@@ -317,7 +398,7 @@ def update_database() -> dict:
     """GitHub Releases から最新の DuckDB 版を取得して差し替える（毎日更新される）。MLEAGUE_DB 指定時は使えない。"""
     if os.environ.get("MLEAGUE_DB"):
         return {"error": "MLEAGUE_DB で DB を指定しているため更新しません"}
-    before = TAG_PATH.read_text().strip() if TAG_PATH.exists() else None
+    before = TAG_PATH.read_text(encoding="utf-8").strip() if TAG_PATH.exists() else None
     tag = _download_latest()
     return {"previous_tag": before, "current_tag": tag, "updated": before != tag}
 

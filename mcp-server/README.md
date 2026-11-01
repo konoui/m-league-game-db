@@ -2,6 +2,8 @@
 
 M リーグの試合データベース（DuckDB 版）に、Claude Code や Claude Desktop から自然言語で質問するための MCP サーバーです。
 
+`.mcpb`（Claude Desktop 用）はビルド時に解決した `uv.lock` を同梱するため、利用者の環境でも同じバージョンの依存関係で動きます。
+
 ## 必要なもの
 
 - [uv](https://docs.astral.sh/uv/)（依存関係は `server.py` の先頭に書いてあり、初回起動時に自動で入ります）
@@ -46,7 +48,7 @@ uv run --script server.py --http --port 8765 --allowed-host <トンネルのホ�
 | `describe_table` | 列の型と、TABLE.duckdb.md の説明・注意書き |
 | `search_query_examples` | `queries/` の検証済みクエリ例から似たものを探す |
 | `find_player` | 選手を名前・ふりがなで探し、所属チームの履歴を返す |
-| `get_doc` | よく使う SQL の型・用語集・ルール・牌の表記・役名などの文書 |
+| `get_doc` | 用語集・ルール・牌の表記・役名などの文書 |
 | `database_info` | DB のリリースタグとデータの期間 |
 | `update_database` | 最新のリリースに差し替える |
 
@@ -63,9 +65,11 @@ uv run --script server.py --http --port 8765 --allowed-host <トンネルのホ�
 | `MLEAGUE_CACHE_DIR` | キャッシュの場所（既定 `~/.cache/m-league-game-db`） |
 | `MLEAGUE_RELEASE_REPO` | 取得元のリポジトリ（既定 `konoui/m-league-game-db`） |
 
-## 用語集と SQL の型
+## 用語集
 
-`GLOSSARY.md` は麻雀用語と DB の列の対応です。M リーグ固有のルール（数え役満なしなど）もここに書いています。`RECIPES.md` は連続記録や率のランキングなど、よく使う SQL の型です。どちらも `get_doc` で Claude が参照します。
+`GLOSSARY.md` は麻雀用語と DB の列の対応です。M リーグ固有のルール（数え役満なしなど）もここに書いています。`get_doc` で Claude が参照します。よく使う SQL の型は `queries/` の検証済みクエリ例にまとめてあり、`search_query_examples` から検索できます。
+
+スキーマ文書（`TABLE.duckdb.md` など）は、DB の初回取得時にリリース zip からキャッシュディレクトリ（既定 `~/.cache/m-league-game-db/docs/`）に展開し、DB と同じ版を優先して読みます。キャッシュがないときは .mcpb に同梱した文書を使います。
 
 ## 詳しくない人向けの導入手順
 

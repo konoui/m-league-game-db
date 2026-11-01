@@ -3,6 +3,11 @@
 #   使い方: ./build_mcpb.sh
 set -euo pipefail
 
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv が必要です: https://docs.astral.sh/uv/" >&2
+  exit 1
+fi
+
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HERE")"
 VERSION="${VERSION:-0.1.0}"
@@ -13,8 +18,8 @@ rm -rf "$BUILD" && mkdir -p "$BUILD/src/docs/queries" "$DIST"
 
 # サーバー本体と、サーバーが読む文書・用語集・クエリ例
 cp "$HERE/server.py" "$BUILD/src/server.py"
-cp "$HERE/GLOSSARY.md" "$HERE/RECIPES.md" "$BUILD/src/docs/"
-for f in TABLE.duckdb.md MLEAGUE.md DB_NAMING.md PAI_FORMAT.md YAKU_NAMES.md DB_CHANGELOG.md; do
+cp "$HERE/GLOSSARY.md" "$BUILD/src/docs/"
+for f in TABLE.duckdb.md MLEAGUE.md DB_NAMING.md PAI_FORMAT.md YAKU_NAMES.md; do
   cp "$REPO/$f" "$BUILD/src/docs/"
 done
 for d in "$REPO"/queries/*/; do
@@ -23,13 +28,17 @@ for d in "$REPO"/queries/*/; do
   cp "$d/meta.json" "$d/query.sql" "$BUILD/src/docs/queries/$name/"
 done
 
+# 依存は server.py の PEP 723 ヘッダと揃える
 cat > "$BUILD/pyproject.toml" <<EOF
 [project]
 name = "m-league-db"
 version = "$VERSION"
 requires-python = ">=3.11"
-dependencies = ["mcp>=2,<3", "duckdb>=1.1", "httpx>=0.27"]
+dependencies = ["mcp>=2,<3", "duckdb>=1.1,<3", "httpx>=0.27"]
 EOF
+
+# 利用者の環境で同じバージョンが入るように、ビルド時に解決した uv.lock を同梱する
+(cd "$BUILD" && uv lock)
 
 cat > "$BUILD/manifest.json" <<EOF
 {
