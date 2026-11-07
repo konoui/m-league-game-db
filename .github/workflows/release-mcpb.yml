@@ -1,0 +1,128 @@
+name: Release MCP Extension
+
+# mcpb-v<X.Y.Z> のタグを push すると、Claude Desktop の拡張機能（.mcpb）をビルドしてリリースに載せる。
+# mcp-server/ を変更した PR では、ビルドと動作確認だけを行う。
+on:
+  push:
+    tags: ["mcpb-v*"]
+  pull_request:
+    paths:
+      - "mcp-server/**"
+      - ".github/workflows/release-mcpb.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Decide version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#mcpb-v}"
+          else
+            version="0.0.0"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build .mcpb
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: ./mcp-server/build_mcpb.sh
+
+      # 展開した .mcpb を、同梱の uv.lock の依存で起動できるか、最新の DB に対してツールが動くかを確かめる
+      - name: Smoke test
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download --pattern duckdb.zip --dir "$RUNNER_TEMP/db"
+          unzip -o -q "$RUNNER_TEMP/db/duckdb.zip" database.duckdb -d "$RUNNER_TEMP/db"
+          unzip -q mcp-server/dist/m-league-db.mcpb -d "$RUNNER_TEMP/mcpb"
+          MLEAGUE_DB="$RUNNER_TEMP/db/database.duckdb" uv run --locked --directory "$RUNNER_TEMP/mcpb" python - <<'EOF'
+          import sys
+          sys.path.insert(0, "src")
+          import server
+
+          assert server.BUNDLED_DOCS.name == "docs", server.BUNDLED_DOCS
+          assert server.search_query_examples("連続1着", include_sql=False)
+          assert server.get_doc("glossary").startswith("#")
+          assert server.get_doc("tables").startswith("#")
+          assert server.list_tables()
+          assert server.describe_table("game")["columns"]
+          assert server.run_sql("SELECT count(*) FROM game")["rows"][0][0] > 0
+          assert server.find_player("ささき")
+          try:
+              server.run_sql("SELECT * FROM read_csv('/etc/hosts')")
+          except server.ToolError:
+              pass
+          else:
+              raise AssertionError("外部ファイルの読み込みが拒否されていない")
+          print(server.database_info())
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m-league-db-mcpb
+          path: mcp-server/dist/m-league-db.mcpb
+          if-no-files-found: error
+
+  # 版ごとのリリース（mcpb-v<X.Y.Z>）を作り、固定のリリース（mcpb）の中身をその版に差し替える。
+  # どちらも Latest にしない。Latest のリリースは DB として、server.py・CI・validate.py と
+  # m-league-score-sheet の日々の DB 作成（前回の DB の取得）が使うため。
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: release-mcpb
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      STABLE_TAG: mcpb
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: m-league-db-mcpb
+
+      - name: Create versioned release
+        run: |
+          version="${GITHUB_REF_NAME#mcpb-v}"
+          gh release create "$GITHUB_REF_NAME" m-league-db.mcpb \
+            --verify-tag \
+            --latest=false \
+            --title "Claude Desktop 拡張機能 $version" \
+            --notes "Claude Desktop の拡張機能 $version です。導入手順は mcp-server/GUIDE.md を参照してください。最新版は https://github.com/$GH_REPO/releases/download/$STABLE_TAG/m-league-db.mcpb から取得できます。"
+
+      # 固定タグをこの版のコミットへ動かす。リリースに付くソースコードの zip もこの版になる
+      - name: Move stable tag
+        run: |
+          if gh api "repos/$GH_REPO/git/ref/tags/$STABLE_TAG" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$STABLE_TAG" -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          else
+            gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$STABLE_TAG" -f sha="$GITHUB_SHA" >/dev/null
+          fi
+
+      - name: Update stable release
+        run: |
+          version="${GITHUB_REF_NAME#mcpb-v}"
+          title="Claude Desktop 拡張機能（最新: $version）"
+          notes="Claude Desktop の拡張機能の最新版（$version）です。新しい版を出すたびに、このリリースのファイルを差し替えます。導入手順は mcp-server/GUIDE.md、過去の版は mcpb-v で始まるリリースを参照してください。"
+          if gh release view "$STABLE_TAG" >/dev/null 2>&1; then
+            gh release upload "$STABLE_TAG" m-league-db.mcpb --clobber
+            gh release edit "$STABLE_TAG" --title "$title" --notes "$notes"
+          else
+            gh release create "$STABLE_TAG" m-league-db.mcpb --verify-tag --latest=false --title "$title" --notes "$notes"
+          fi

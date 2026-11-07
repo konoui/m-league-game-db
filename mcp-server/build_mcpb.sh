@@ -11,6 +11,11 @@ fi
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(dirname "$HERE")"
 VERSION="${VERSION:-0.1.0}"
+# manifest.json（semver）と pyproject.toml（PEP 440）の両方で通る形に限る
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "VERSION は X.Y.Z の形で指定してください: $VERSION" >&2
+  exit 1
+fi
 BUILD="$HERE/build/mcpb"
 DIST="$HERE/dist"
 

@@ -74,3 +74,23 @@ uv run --script server.py --http --port 8765 --allowed-host <トンネルのホ�
 ## 詳しくない人向けの導入手順
 
 `GUIDE.md` を参照してください。`./build_mcpb.sh` で Claude Desktop 用の拡張機能 `dist/m-league-db.mcpb` を作れます。
+
+## 拡張機能のリリース
+
+`mcpb-v<X.Y.Z>` のタグを push すると、`.github/workflows/release-mcpb.yml` が `.mcpb` をビルドして動作を確かめ、次の 2 つのリリースに載せます。
+
+```bash
+git tag mcpb-v0.1.0
+git push origin mcpb-v0.1.0
+```
+
+| リリース | 中身 | ダウンロード URL |
+| --- | --- | --- |
+| `mcpb-v<X.Y.Z>` | その版。版ごとに残る | `https://github.com/konoui/m-league-game-db/releases/download/mcpb-v<X.Y.Z>/m-league-db.mcpb` |
+| `mcpb`（固定） | 最新の版。版を出すたびに差し替える | `https://github.com/konoui/m-league-game-db/releases/download/mcpb/m-league-db.mcpb` |
+
+- どちらのリリースも Latest にしません。Latest のリリースは DB として、`server.py`・CI・`scripts/validate.py`・m-league-score-sheet の日々の DB 作成が取得するためです。Latest が拡張機能のリリースになると、日々の DB 作成が止まります。
+- 拡張機能のリリースは、このワークフローからだけ作ります。画面から手で作ったり編集したりしないでください（「Set as the latest release」が付くことがあります）。
+- 固定タグ `mcpb` は、版を出すたびにその版のコミットへ動かします。
+- `.mcpb` には、ビルド時点のクエリ例（`queries/`）と `MLEAGUE.md` を同梱します。これらを利用者に届けるには、新しいタグでリリースし直します。
+- `mcp-server/` を変更した PR では、ビルドと動作確認だけを行います。

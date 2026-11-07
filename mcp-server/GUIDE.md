@@ -7,7 +7,7 @@ Claude Desktop に拡張機能を 1 つ入れるだけで、「連続トップ�
 ## 用意するもの
 
 - **Claude Desktop**（Mac または Windows）。まだなら [claude.com/download](https://claude.com/download) から入れてください。
-- **`m-league-db.mcpb`**（配布ページからダウンロードします）… データを検索する拡張機能
+- **`m-league-db.mcpb`** … データを検索する拡張機能。[こちらからダウンロード](https://github.com/konoui/m-league-game-db/releases/download/mcpb/m-league-db.mcpb)します。いつも最新版が手に入ります。
 
 ## 手順
 
