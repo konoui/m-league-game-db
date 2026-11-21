@@ -8,6 +8,7 @@
   （既定: ~/.cache/m-league-game-db/。環境変数 MLEAGUE_DB で任意の .duckdb を指定可）
 - SQL は読み取り専用・外部ファイルアクセス禁止・タイムアウト・行数上限つきで実行する
 - スキーマ文書・用語集・クエリ例（queries/）をツールとして引ける
+- クエリ例は同梱版に加えて、リポジトリの main から新しい版を取得し、手元の DB で EXPLAIN が通るものを使う
 
 起動: uv run --script mcp-server/server.py   （stdio）
 """
@@ -47,6 +48,16 @@ CHECKED_PATH = CACHE_DIR / "last_checked.txt"
 UPDATE_INTERVAL_S = int(os.environ.get("MLEAGUE_UPDATE_INTERVAL_S", 24 * 3600))
 _update_lock = threading.Lock()
 
+# クエリ例は .mcpb に同梱した版に加えて、RELEASE_REPO の main から新しい版を取得してキャッシュする。
+# queries/ を最後に変えたコミットを API で確かめ、変わったときだけ zip を取る。
+# 確かめるのは DB を取得・更新したときと、前回から EXAMPLES_INTERVAL_S たったとき。
+USE_CACHE_EXAMPLES = USE_CACHE_DOCS and os.environ.get("MLEAGUE_UPDATE_EXAMPLES", "1") != "0"
+EXAMPLES_REF = "main"
+CACHE_QUERIES = CACHE_DIR / "queries"
+EXAMPLES_CHECKED_PATH = CACHE_DIR / "queries_last_checked.txt"
+EXAMPLES_INTERVAL_S = int(os.environ.get("MLEAGUE_EXAMPLES_INTERVAL_S", 7 * 24 * 3600))
+_examples_lock = threading.Lock()
+
 SQL_TIMEOUT_S = 30
 DEFAULT_ROWS = 100
 MAX_ROWS = 1000
@@ -70,6 +81,17 @@ mcp = MCPServer(
 
 # ---------------------------------------------------------------- DB
 DOCS_EXCLUDE = {"db_changelog.md"}
+_UNSAFE_NAME = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+
+
+def _safe_child(parent: Path, name: str) -> Path | None:
+    """zip から取ったファイル名を parent 直下のパスにする。外に出る名前や Windows で特別な意味を持つ名前は None。"""
+    if not name or name in (".", "..") or name[-1] in ". " or _UNSAFE_NAME.search(name):
+        return None
+    path = parent / name
+    if path.resolve().parent != parent.resolve():
+        return None
+    return path
 
 
 def _extract_docs(z: zipfile.ZipFile, dest: Path, tag: str) -> Path | None:
@@ -78,9 +100,12 @@ def _extract_docs(z: zipfile.ZipFile, dest: Path, tag: str) -> Path | None:
     found = False
     for info in z.infolist():
         name = info.filename
-        if info.is_dir() or "/" in name or "\\" in name or name.casefold() in DOCS_EXCLUDE or not name.endswith(".md"):
+        if info.is_dir() or name.casefold() in DOCS_EXCLUDE or not name.endswith(".md"):
             continue
-        (dest / name).write_bytes(z.read(info))
+        path = _safe_child(dest, name)
+        if path is None:
+            continue
+        path.write_bytes(z.read(info))
         found = True
     if not found:
         return None
@@ -139,26 +164,28 @@ def _latest_tag() -> str:
         return c.get(f"https://api.github.com/repos/{RELEASE_REPO}/releases/latest").json()["tag_name"]
 
 
-def _maybe_update() -> None:
+def _maybe_update() -> bool:
     """前回の確認から UPDATE_INTERVAL_S 以上たっていれば、新しいリリースがあるか確かめて差し替える。
-    オフラインや GitHub の制限で失敗しても、手元の DB でそのまま動く。"""
+    差し替えたら True を返す。オフラインや GitHub の制限で失敗しても、手元の DB でそのまま動く。"""
     import time
     try:
         last = float(CHECKED_PATH.read_text()) if CHECKED_PATH.exists() else 0.0
     except ValueError:
         last = 0.0
     if time.time() - last < UPDATE_INTERVAL_S:
-        return
+        return False
     with _update_lock:
         try:
             current = TAG_PATH.read_text(encoding="utf-8").strip() if TAG_PATH.exists() else None
             if _latest_tag() != current:
                 _download_latest()
+                return True
         except Exception as e:  # noqa: BLE001 - 更新の失敗で質問への回答を止めない
             logging.getLogger(__name__).warning("DB の更新確認に失敗しました（手元の DB を使います）: %s", e)
         finally:
             CACHE_DIR.mkdir(parents=True, exist_ok=True)
             CHECKED_PATH.write_text(str(time.time()))
+    return False
 
 
 def _ensure_db() -> Path:
@@ -167,9 +194,106 @@ def _ensure_db() -> Path:
             raise FileNotFoundError(f"MLEAGUE_DB={DB_PATH} が見つかりません")
         _download_latest()
         CHECKED_PATH.write_text(str(__import__("time").time()))
+        _maybe_update_examples(force=True)
     elif not os.environ.get("MLEAGUE_DB"):
-        _maybe_update()
+        updated = _maybe_update()
+        _maybe_update_examples(force=updated)
     return DB_PATH
+
+
+# ---------------------------------------------------------------- query examples の取得
+_EXAMPLE_FILES = ("meta.json", "query.sql")
+
+
+def _cached_examples_sha() -> str | None:
+    try:
+        return (CACHE_QUERIES / ".sha").read_text(encoding="utf-8").strip() or None
+    except OSError:
+        return None
+
+
+def _latest_examples_sha() -> str:
+    """RELEASE_REPO の EXAMPLES_REF で queries/ を最後に変えたコミットの SHA を返す。"""
+    with httpx.Client(follow_redirects=True, timeout=15) as c:
+        res = c.get(f"https://api.github.com/repos/{RELEASE_REPO}/commits",
+                    params={"sha": EXAMPLES_REF, "path": "queries", "per_page": 1})
+        res.raise_for_status()
+        sha = res.json()[0]["sha"]
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError(f"コミットの SHA が不正です: {sha!r}")
+    return sha
+
+
+def _download_examples(sha: str) -> Path:
+    """そのコミットの queries/*/{meta.json,query.sql} だけを CACHE_QUERIES に展開して差し替える。"""
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError(f"コミットの SHA が不正です: {sha!r}")
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    with httpx.Client(follow_redirects=True, timeout=60) as c:
+        res = c.get(f"https://codeload.github.com/{RELEASE_REPO}/zip/{sha}")
+        res.raise_for_status()
+        data = res.content
+    tmp_dir = Path(tempfile.mkdtemp(dir=CACHE_DIR, prefix=".download-"))
+    try:
+        dest = tmp_dir / "queries"
+        dest.mkdir()
+        count = 0
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            for info in z.infolist():
+                # <repo>-<sha>/queries/<name>/<file> の形だけを取る
+                parts = info.filename.split("/")
+                if info.is_dir() or len(parts) != 4 or parts[1] != "queries" or parts[3] not in _EXAMPLE_FILES:
+                    continue
+                folder = _safe_child(dest, parts[2])
+                if folder is None:
+                    continue
+                folder.mkdir(exist_ok=True)
+                (folder / parts[3]).write_bytes(z.read(info))
+                count += 1
+        if count == 0:
+            raise ValueError("zip に queries/ がありません")
+        (dest / ".sha").write_text(sha, encoding="utf-8")
+        old = tmp_dir / "queries.old"
+        if CACHE_QUERIES.exists():
+            CACHE_QUERIES.rename(old)
+        try:
+            dest.rename(CACHE_QUERIES)
+        except Exception:
+            if old.exists() and not CACHE_QUERIES.exists():
+                old.rename(CACHE_QUERIES)
+            raise
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    return CACHE_QUERIES
+
+
+def _maybe_update_examples(force: bool = False) -> None:
+    """クエリ例の新しい版があれば取得する。force でなければ EXAMPLES_INTERVAL_S ごとにだけ確かめる。
+    失敗しても、手元のクエリ例（キャッシュか同梱版）でそのまま動く。"""
+    import time
+    if not USE_CACHE_EXAMPLES:
+        return
+    if not force:
+        try:
+            last = float(EXAMPLES_CHECKED_PATH.read_text()) if EXAMPLES_CHECKED_PATH.exists() else 0.0
+        except ValueError:
+            last = 0.0
+        if time.time() - last < EXAMPLES_INTERVAL_S:
+            return
+    if not _examples_lock.acquire(blocking=False):  # 別スレッドが確認中なら待たない
+        return
+    try:
+        sha = _latest_examples_sha()
+        if sha != _cached_examples_sha():
+            _download_examples(sha)
+    except Exception as e:  # noqa: BLE001 - 更新の失敗で質問への回答を止めない
+        logging.getLogger(__name__).warning("クエリ例の更新確認に失敗しました（手元のクエリ例を使います）: %s", e)
+    finally:
+        try:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            EXAMPLES_CHECKED_PATH.write_text(str(time.time()))
+        finally:
+            _examples_lock.release()
 
 
 def _connect() -> duckdb.DuckDBPyConnection:
@@ -261,14 +385,85 @@ def _table_sections() -> dict[str, str]:
     return out
 
 
-def _examples() -> list[dict]:
-    items = []
-    for d in sorted((BUNDLED_DOCS / "queries").iterdir()):
-        if not (d / "meta.json").exists():
+def _load_examples(root: Path) -> dict[str, dict]:
+    items = {}
+    if not root.is_dir():
+        return items
+    for d in sorted(root.iterdir()):
+        if not (d / "meta.json").exists() or not (d / "query.sql").exists():
             continue
-        meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
-        items.append({"name": d.name, "description": meta["description"], "plan": meta.get("plan", []),
-                      "tables": meta.get("tables", []), "sql": (d / "query.sql").read_text(encoding="utf-8").strip()})
+        try:
+            meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
+            items[d.name] = {"name": d.name, "description": meta["description"], "plan": meta.get("plan", []),
+                             "tables": meta.get("tables", []), "sql": (d / "query.sql").read_text(encoding="utf-8").strip()}
+        except (OSError, ValueError, KeyError):
+            continue
+    return items
+
+
+EXPLAIN_TIMEOUT_S = 5
+
+
+def _explainable(examples: dict[str, dict]) -> set[str]:
+    """手元の DB に対して EXPLAIN が通るクエリ例の名前を返す。存在しない列・テーブルを使うものを落とす。
+    取得した SQL を実行しないよう、SELECT 1 文だけを EXPLAIN にかけ（複数文や EXPLAIN ANALYZE は外す）、時間も制限する。"""
+    ok = set()
+    con = _connect()
+    try:
+        for name, ex in examples.items():
+            try:
+                stmts = con.extract_statements(ex["sql"])
+                if len(stmts) != 1 or stmts[0].type != duckdb.StatementType.SELECT:
+                    continue
+                timer = threading.Timer(EXPLAIN_TIMEOUT_S, con.interrupt)
+                timer.start()
+                try:
+                    con.execute("EXPLAIN " + stmts[0].query).fetchall()
+                finally:
+                    timer.cancel()
+                ok.add(name)
+            except duckdb.Error:
+                continue
+    finally:
+        con.close()
+    return ok
+
+
+_examples_memo: tuple[tuple, list[dict]] | None = None
+
+
+def _examples() -> list[dict]:
+    """クエリ例を返す。取得したキャッシュがあればその一覧を正とし、手元の DB で EXPLAIN が通る版を使う。
+    通らないものは同梱版で代え、同梱版もなければ外す。キャッシュがなければ同梱版をそのまま使う。"""
+    global _examples_memo
+    bundled = _load_examples(BUNDLED_DOCS / "queries")
+    if not USE_CACHE_EXAMPLES:
+        return list(bundled.values())
+    try:
+        _ensure_db()  # DB とクエリ例の更新確認（間隔内なら何もしない）
+    except Exception as e:  # noqa: BLE001 - DB を取れなくてもクエリ例は返す
+        logging.getLogger(__name__).warning("DB を用意できませんでした（同梱のクエリ例を使います）: %s", e)
+        return list(bundled.values())
+    sha = _cached_examples_sha()
+    if sha is None:
+        return list(bundled.values())
+    try:
+        db_key = (str(DB_PATH), DB_PATH.stat().st_mtime_ns)
+    except OSError:
+        db_key = None
+    key = (sha, db_key)
+    if _examples_memo is not None and _examples_memo[0] == key:
+        return _examples_memo[1]
+    cached = _load_examples(CACHE_QUERIES)
+    if not cached:
+        return list(bundled.values())
+    try:
+        ok = _explainable(cached)
+    except Exception as e:  # noqa: BLE001 - 検証できないときは同梱版に戻す
+        logging.getLogger(__name__).warning("取得したクエリ例を検証できませんでした（同梱版を使います）: %s", e)
+        return list(bundled.values())
+    items = [cached[n] if n in ok else bundled[n] for n in sorted(cached) if n in ok or n in bundled]
+    _examples_memo = (key, items)
     return items
 
 
@@ -399,6 +594,7 @@ def update_database() -> dict:
         return {"error": "MLEAGUE_DB で DB を指定しているため更新しません"}
     before = TAG_PATH.read_text(encoding="utf-8").strip() if TAG_PATH.exists() else None
     tag = _download_latest()
+    _maybe_update_examples(force=True)
     return {"previous_tag": before, "current_tag": tag, "updated": before != tag}
 
 

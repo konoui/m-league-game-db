@@ -45,14 +45,30 @@ jobs:
       - name: Smoke test
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # クエリ例の取得を、このコミットの zip で確かめる（API の回数制限を避けるため SHA の問い合わせはしない）
+          EXAMPLES_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           gh release download --pattern duckdb.zip --dir "$RUNNER_TEMP/db"
           unzip -o -q "$RUNNER_TEMP/db/duckdb.zip" database.duckdb -d "$RUNNER_TEMP/db"
           unzip -q mcp-server/dist/m-league-db.mcpb -d "$RUNNER_TEMP/mcpb"
-          MLEAGUE_DB="$RUNNER_TEMP/db/database.duckdb" uv run --locked --directory "$RUNNER_TEMP/mcpb" python - <<'EOF'
+          MLEAGUE_DB="$RUNNER_TEMP/db/database.duckdb" MLEAGUE_CACHE_DIR="$RUNNER_TEMP/cache" \
+            uv run --locked --directory "$RUNNER_TEMP/mcpb" python - <<'EOF'
+          import os
           import sys
           sys.path.insert(0, "src")
           import server
+
+          # 取得したクエリ例が同梱版と同じ件数で、最新の DB で EXPLAIN がすべて通るか
+          server._download_examples(os.environ["EXAMPLES_SHA"])
+          fetched = server._load_examples(server.CACHE_QUERIES)
+          bundled = server._load_examples(server.BUNDLED_DOCS / "queries")
+          assert fetched.keys() == bundled.keys(), (len(fetched), len(bundled))
+          failed = fetched.keys() - server._explainable(fetched)
+          assert not failed, failed
+          # 取得した SQL を実行しないこと（複数文・EXPLAIN ANALYZE は検証で外す）と、zip の名前で外に書かないこと
+          assert not server._explainable({"multi": {"sql": "SELECT 1; SELECT 2"}, "analyze": {"sql": "EXPLAIN ANALYZE SELECT 1"}})
+          assert server._safe_child(server.CACHE_QUERIES, "D:evil") is None
+          assert server._safe_child(server.CACHE_QUERIES, "..") is None
 
           assert server.BUNDLED_DOCS.name == "docs", server.BUNDLED_DOCS
           assert server.search_query_examples("連続1着", include_sql=False)
@@ -77,8 +93,8 @@ jobs:
           path: mcp-server/dist/m-league-db.mcpb
           if-no-files-found: error
 
-  # 版ごとのリリース（mcpb-v<X.Y.Z>）を作り、固定のリリース（mcpb）の中身をその版に差し替える。
-  # どちらも Latest にしない。Latest のリリースは DB として、server.py・CI・validate.py と
+  # 版ごとのリリース（mcpb-v<X.Y.Z>）を作る。
+  # Latest にしない。Latest のリリースは DB として、server.py・CI・validate.py と
   # m-league-score-sheet の日々の DB 作成（前回の DB の取得）が使うため。
   release:
     if: github.ref_type == 'tag'
@@ -91,38 +107,17 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
-      STABLE_TAG: mcpb
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: m-league-db-mcpb
 
-      - name: Create versioned release
+      - name: Create release
         run: |
           version="${GITHUB_REF_NAME#mcpb-v}"
           gh release create "$GITHUB_REF_NAME" m-league-db.mcpb \
             --verify-tag \
             --latest=false \
             --title "Claude Desktop 拡張機能 $version" \
-            --notes "Claude Desktop の拡張機能 $version です。導入手順は mcp-server/GUIDE.md を参照してください。最新版は https://github.com/$GH_REPO/releases/download/$STABLE_TAG/m-league-db.mcpb から取得できます。"
+            --notes "Claude Desktop の拡張機能 $version です。導入手順は mcp-server/GUIDE.md を参照してください。"
 
-      # 固定タグをこの版のコミットへ動かす。リリースに付くソースコードの zip もこの版になる
-      - name: Move stable tag
-        run: |
-          if gh api "repos/$GH_REPO/git/ref/tags/$STABLE_TAG" >/dev/null 2>&1; then
-            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$STABLE_TAG" -f sha="$GITHUB_SHA" -F force=true >/dev/null
-          else
-            gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/tags/$STABLE_TAG" -f sha="$GITHUB_SHA" >/dev/null
-          fi
-
-      - name: Update stable release
-        run: |
-          version="${GITHUB_REF_NAME#mcpb-v}"
-          title="Claude Desktop 拡張機能（最新: $version）"
-          notes="Claude Desktop の拡張機能の最新版（$version）です。新しい版を出すたびに、このリリースのファイルを差し替えます。導入手順は mcp-server/GUIDE.md、過去の版は mcpb-v で始まるリリースを参照してください。"
-          if gh release view "$STABLE_TAG" >/dev/null 2>&1; then
-            gh release upload "$STABLE_TAG" m-league-db.mcpb --clobber
-            gh release edit "$STABLE_TAG" --title "$title" --notes "$notes"
-          else
-            gh release create "$STABLE_TAG" m-league-db.mcpb --verify-tag --latest=false --title "$title" --notes "$notes"
-          fi

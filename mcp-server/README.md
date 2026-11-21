@@ -63,7 +63,10 @@ uv run --script server.py --http --port 8765 --allowed-host <トンネルのホ�
 | --- | --- |
 | `MLEAGUE_DB` | 手元の `.duckdb` を使う（自動取得しない） |
 | `MLEAGUE_CACHE_DIR` | キャッシュの場所（既定 `~/.cache/m-league-game-db`） |
-| `MLEAGUE_RELEASE_REPO` | 取得元のリポジトリ（既定 `konoui/m-league-game-db`） |
+| `MLEAGUE_RELEASE_REPO` | 取得元のリポジトリ（既定 `konoui/m-league-game-db`）。DB はこのリポジトリの Latest リリースから、クエリ例は `main` から取る |
+| `MLEAGUE_UPDATE_INTERVAL_S` | DB の更新を確かめる間隔（秒、既定 1 日） |
+| `MLEAGUE_EXAMPLES_INTERVAL_S` | クエリ例の更新を確かめる間隔（秒、既定 7 日）。DB を取得・更新したときは間隔によらず確かめる |
+| `MLEAGUE_UPDATE_EXAMPLES` | `0` でクエリ例の取得をやめ、同梱版だけを使う |
 
 ## 用語集
 
@@ -71,26 +74,31 @@ uv run --script server.py --http --port 8765 --allowed-host <トンネルのホ�
 
 スキーマ文書（`TABLE.duckdb.md` など）は、DB の初回取得時にリリース zip からキャッシュディレクトリ（既定 `~/.cache/m-league-game-db/docs/`）に展開し、DB と同じ版を優先して読みます。キャッシュがないときは .mcpb に同梱した文書を使います。
 
+クエリ例は .mcpb に同梱した版に加えて、取得元のリポジトリの `main` から新しい版を取得します（キャッシュは `~/.cache/m-league-game-db/queries/`）。
+
+- `queries/` を最後に変えたコミットを GitHub API で確かめ、前回と違うときだけ、そのコミットの zip から `meta.json` と `query.sql` を取ります。
+- 確かめるのは、DB を取得・更新したとき（スキーマが変わってクエリ例が合わなくなりうるとき）と、前回から 7 日たったときです。
+- 取得したクエリ例のうち、手元の DB で `EXPLAIN` が通るものだけを使います。取得した SQL を実行しないよう、`EXPLAIN` にかけるのは SELECT 1 文だけのクエリに限り（複数文や `EXPLAIN ANALYZE` は外す）、1 件 5 秒で打ち切ります。通らないものは同梱版で代え、同梱版にもなければ外します。DB とクエリ例の版がずれても、存在しない列やテーブルを使う例を渡さないためです。
+- 取得や検証に失敗したら、手元のキャッシュか同梱版をそのまま使います。
+- `MLEAGUE_DB` や `MLEAGUE_DOC_ROOT` を指定しているとき、リポジトリ内で直接起動したときは取得せず、`queries/` をそのまま読みます。
+- `main` に入れたクエリ例は、拡張機能を出し直さなくても利用者に届きます。外部からの PR を取り込むときは、その前提でレビューしてください。
+
 ## 詳しくない人向けの導入手順
 
 `GUIDE.md` を参照してください。`./build_mcpb.sh` で Claude Desktop 用の拡張機能 `dist/m-league-db.mcpb` を作れます。
 
 ## 拡張機能のリリース
 
-`mcpb-v<X.Y.Z>` のタグを push すると、`.github/workflows/release-mcpb.yml` が `.mcpb` をビルドして動作を確かめ、次の 2 つのリリースに載せます。
+`mcpb-v<X.Y.Z>` のタグを push すると、`.github/workflows/release-mcpb.yml` が `.mcpb` をビルドして動作を確かめ、同じ名前のリリースに載せます。
 
 ```bash
 git tag mcpb-v0.1.0
 git push origin mcpb-v0.1.0
 ```
 
-| リリース | 中身 | ダウンロード URL |
-| --- | --- | --- |
-| `mcpb-v<X.Y.Z>` | その版。版ごとに残る | `https://github.com/konoui/m-league-game-db/releases/download/mcpb-v<X.Y.Z>/m-league-db.mcpb` |
-| `mcpb`（固定） | 最新の版。版を出すたびに差し替える | `https://github.com/konoui/m-league-game-db/releases/download/mcpb/m-league-db.mcpb` |
+ダウンロード URL は版ごとに `https://github.com/konoui/m-league-game-db/releases/download/mcpb-v<X.Y.Z>/m-league-db.mcpb` です。常に最新版を指す固定の URL は用意しないので、利用者には版を指定して取得してもらいます。
 
-- どちらのリリースも Latest にしません。Latest のリリースは DB として、`server.py`・CI・`scripts/validate.py`・m-league-score-sheet の日々の DB 作成が取得するためです。Latest が拡張機能のリリースになると、日々の DB 作成が止まります。
+- 拡張機能のリリースは Latest にしません。Latest のリリースは DB として、`server.py`・CI・`scripts/validate.py`・m-league-score-sheet の日々の DB 作成が取得するためです。Latest が拡張機能のリリースになると、日々の DB 作成が止まります。
 - 拡張機能のリリースは、このワークフローからだけ作ります。画面から手で作ったり編集したりしないでください（「Set as the latest release」が付くことがあります）。
-- 固定タグ `mcpb` は、版を出すたびにその版のコミットへ動かします。
-- `.mcpb` には、ビルド時点のクエリ例（`queries/`）と `MLEAGUE.md` を同梱します。これらを利用者に届けるには、新しいタグでリリースし直します。
+- `.mcpb` には、ビルド時点のクエリ例（`queries/`）と `MLEAGUE.md` を同梱します。クエリ例は利用者の手元で `main` から更新されますが、`MLEAGUE.md` を届けるには新しいタグでリリースし直します。
 - `mcp-server/` を変更した PR では、ビルドと動作確認だけを行います。
